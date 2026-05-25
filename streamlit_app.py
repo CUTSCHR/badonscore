@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="Battle at Bandon 2026",
     page_icon="⛳",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 # ─── CSS: Bright / Masters-inspired with earth-tone accents ───────────────────
