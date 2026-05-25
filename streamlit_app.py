@@ -234,6 +234,41 @@ st.markdown("""
     details summary svg { display: inline-block !important; }
     /* Hide material icon text fallback in expanders */
     .epifhcv2, span.st-emotion-cache-leahp2 { font-family: 'Material Symbols Rounded' !important; font-size: 20px !important; width: 20px !important; overflow: hidden !important; display: inline-block !important; }
+
+    /* === Mobile Responsive === */
+    @media (max-width: 768px) {
+        .hero { padding: 28px 16px 24px !important; margin-bottom: 16px !important; border-radius: 10px !important; }
+        .hero-title { font-size: 2.2rem !important; letter-spacing: 1px !important; }
+        .hero-sub { font-size: 0.85rem !important; letter-spacing: 1px !important; }
+        .section-header { font-size: 1.3rem !important; margin: 16px 0 10px !important; }
+        .team-score-box { padding: 14px 10px !important; }
+        .team-score-box h3 { font-size: 0.95rem !important; }
+        .team-score-box .score { font-size: 2.2rem !important; }
+        .card { padding: 14px !important; margin-bottom: 10px !important; }
+        .lb-table th, .lb-table td { padding: 6px 4px !important; font-size: 0.75rem !important; }
+        .sched-table th, .sched-table td { padding: 6px 6px !important; font-size: 0.75rem !important; }
+        .sc-table th { padding: 4px 2px !important; font-size: 0.6rem !important; }
+        .sc-table td { padding: 3px 2px !important; font-size: 0.7rem !important; }
+        .sc-table .player-header { font-size: 0.7rem !important; }
+        .money-big { font-size: 1.6rem !important; }
+        div[data-testid="stNumberInput"] { max-width: 65px !important; }
+        /* Stack columns on mobile */
+        [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 8px !important; }
+        [data-testid="stColumn"] { min-width: 100% !important; flex: 1 1 100% !important; }
+        /* Tables scroll horizontally */
+        .sc-table, .sched-table, .lb-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+        /* Reduce main padding */
+        .stMainBlockContainer { padding-left: 12px !important; padding-right: 12px !important; }
+        section[data-testid="stMain"] > div { padding: 0 8px !important; }
+    }
+    @media (max-width: 480px) {
+        .hero-title { font-size: 1.7rem !important; letter-spacing: 0.5px !important; }
+        .hero-sub { font-size: 0.75rem !important; }
+        .hero { padding: 20px 12px 18px !important; }
+        .section-header { font-size: 1.1rem !important; }
+        .team-score-box .score { font-size: 1.8rem !important; }
+        .lb-table th, .lb-table td { padding: 5px 3px !important; font-size: 0.7rem !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -645,7 +680,7 @@ def page_leaderboard(data):
         import base64
         with open(logo_path, "rb") as f:
             logo_b64 = base64.b64encode(f.read()).decode()
-        st.markdown(f'<div style="text-align:center;margin-bottom:8px;"><img src="data:image/png;base64,{logo_b64}" style="width:240px;"></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align:center;margin-bottom:8px;"><img src="data:image/png;base64,{logo_b64}" style="width:240px;max-width:60vw;"></div>', unsafe_allow_html=True)
 
     # Hero
     st.markdown("""
