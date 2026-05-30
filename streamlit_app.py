@@ -1550,6 +1550,112 @@ def page_skins(data):
             st.caption(f"Skins: {txt}")
 
 
+def page_rules():
+    st.markdown('<div class="section-header">Rules & Scoring</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Team Championship (16 pts available · First to 8.5)</div>
+        <p style="margin:8px 0;">16 matches across 4 days. Each match is worth <strong>1 point</strong>. Halved matches award 0.5 to each team. First team to 8.5 points wins the Team Championship.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Match Formats</div>
+        <table class="sched-table">
+            <thead><tr><th>Format</th><th>Scoring</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr class="row-a"><td><strong>2v2 Scramble</strong></td><td>Match Play</td><td>Both players hit, pick the best ball, both play from there. Repeat until holed. Hole-by-hole winner.</td></tr>
+                <tr class="row-b"><td><strong>2v2 Best Ball</strong></td><td>Stroke Play (NET)</td><td>All players play their own ball. Best NET score from each team counts per hole. Lowest total NET wins.</td></tr>
+                <tr class="row-a"><td><strong>2v2 Modified Alt Shot</strong></td><td>Match Play</td><td>Both hit tee shots, pick one, then alternate from there. Hole-by-hole winner.</td></tr>
+                <tr class="row-b"><td><strong>2v2 Alt Shot</strong></td><td>Match Play</td><td>One player tees off, then alternate shots until holed. Switch who tees off each hole. Hole-by-hole winner.</td></tr>
+                <tr class="row-a"><td><strong>Singles</strong></td><td>Match Play (NET)</td><td>1v1 individual match play with handicap strokes applied. Hole-by-hole winner.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Handicap Calculations</div>
+        <p style="margin:8px 0;"><strong>Course Handicap:</strong> Each player's handicap index is converted to a course handicap for each course using slope/rating. Enter these on the Handicaps tab.</p>
+        <p style="margin:8px 0;"><strong>Stroke Allocation:</strong> Strokes are allocated by Stroke Index (S.I.). A 10-handicap receives 1 stroke on each of the 10 hardest holes (S.I. 1–10). An 18+ handicap receives 2 strokes on the hardest holes first.</p>
+        <hr style="border-color:#e8e4dc;margin:12px 0;">
+        <p style="margin:8px 0;font-weight:600;">Team Format Handicaps (calculated as a team, then difference applied):</p>
+        <table class="sched-table" style="margin-top:8px;">
+            <thead><tr><th>Format</th><th>Formula</th></tr></thead>
+            <tbody>
+                <tr class="row-a"><td>Scramble</td><td>35% of low handicap + 15% of high handicap</td></tr>
+                <tr class="row-b"><td>Modified Alt Shot</td><td>60% of low handicap + 40% of high handicap</td></tr>
+                <tr class="row-a"><td>Alt Shot</td><td>50% of combined handicaps</td></tr>
+                <tr class="row-b"><td>Best Ball / Singles</td><td>Full individual course handicap</td></tr>
+            </tbody>
+        </table>
+        <p style="margin:8px 0;color:#6b8f6b;font-size:0.85rem;">In team match play, only the <em>difference</em> between team handicaps matters. The higher-handicap team receives that many strokes on the hardest S.I. holes.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Individual Championship (NET Stableford)</div>
+        <p style="margin:8px 0;">Played on <strong>3 courses</strong>: Pacific Dunes, Old Macdonald, and Bandon Trails. Each player's NET score per hole is converted to Stableford points:</p>
+        <table class="sched-table" style="margin-top:8px;">
+            <thead><tr><th>Net vs Par</th><th>Points</th></tr></thead>
+            <tbody>
+                <tr class="row-a"><td>Albatross or better (≤ -3)</td><td><strong>5</strong></td></tr>
+                <tr class="row-b"><td>Eagle (-2)</td><td><strong>4</strong></td></tr>
+                <tr class="row-a"><td>Birdie (-1)</td><td><strong>3</strong></td></tr>
+                <tr class="row-b"><td>Par (0)</td><td><strong>2</strong></td></tr>
+                <tr class="row-a"><td>Bogey (+1)</td><td><strong>1</strong></td></tr>
+                <tr class="row-b"><td>Double bogey or worse (≥ +2)</td><td><strong>0</strong></td></tr>
+            </tbody>
+        </table>
+        <p style="margin:8px 0;">Total Stableford points across all 3 rounds determines the Individual Champion.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">OG Belt (Gross Stableford · OGs Only)</div>
+        <p style="margin:8px 0;">Same 3 courses. Uses <strong>GROSS</strong> Stableford (no handicap adjustment). Players are ranked 1st–4th on each course with rank points:</p>
+        <table class="sched-table" style="margin-top:8px;">
+            <thead><tr><th>Rank</th><th>Points</th></tr></thead>
+            <tbody>
+                <tr class="row-a"><td>1st</td><td>4</td></tr>
+                <tr class="row-b"><td>2nd</td><td>3</td></tr>
+                <tr class="row-a"><td>3rd</td><td>2</td></tr>
+                <tr class="row-b"><td>4th</td><td>1</td></tr>
+            </tbody>
+        </table>
+        <p style="margin:8px 0;">Ties split the points evenly. A team bonus of +1 is added for each winning team match an OG participated in. Highest total wins the OG Belt.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Skins ($100/player/round · $800 pot per course)</div>
+        <p style="margin:8px 0;">Played on Pacific Dunes, Old Macdonald, and Bandon Trails (same 3 stableford courses).</p>
+        <p style="margin:8px 0;"><strong>How to win a skin:</strong></p>
+        <ol style="margin:8px 0 8px 20px;line-height:1.8;">
+            <li>Have the <strong>sole lowest NET score</strong> on a hole (no ties)</li>
+            <li><strong>Validate it</strong> by scoring NET par or better on the <em>next</em> hole (hole 18 wraps to hole 1)</li>
+        </ol>
+        <p style="margin:8px 0;">Total skins per round split the $800 pot evenly. Example: 4 total skins = $200/skin.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Scorecard Key</div>
+        <p style="margin:8px 0;"><span style="color:#c17a3a;font-weight:700;">●</span> / <span style="color:#c17a3a;font-weight:700;">●●</span> = Handicap strokes received on that hole</p>
+        <p style="margin:8px 0;"><span style="background:#c8e6c9;padding:2px 6px;border-radius:3px;border:2px solid #2a8a2a;font-weight:700;color:#1a5a1a;">4</span> = Won the hole (match play) or won a skin</p>
+        <p style="margin:8px 0;"><span style="background:#ffcdd2;padding:2px 6px;border-radius:3px;border:2px solid #c62828;font-weight:700;color:#9a1a1a;">G+1</span> = Opponent leads by 1 (match status)</p>
+        <p style="margin:8px 0;"><strong>AS</strong> = All Square &nbsp;|&nbsp; <strong>S+2</strong> = Shooter 2 up &nbsp;|&nbsp; <strong>G+1</strong> = Gilmore 1 up</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -1576,6 +1682,7 @@ def main():
             "Individual Championship",
             "OG Belt",
             "Skins",
+            "Rules",
         ], label_visibility="collapsed")
 
         st.markdown("---")
@@ -1601,6 +1708,7 @@ def main():
     elif "Individual" in page: page_individual(data)
     elif "OG Belt" in page: page_og_belt(data)
     elif "Skins" in page: page_skins(data)
+    elif "Rules" in page: page_rules()
 
     st.session_state.data = data
 
