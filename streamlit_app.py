@@ -538,7 +538,8 @@ def calc_og_team_bonus(data):
 
 # ─── Scorecard HTML builder ──────────────────────────────────────────────────
 
-def build_scorecard_html(course_name, players_data):
+def build_scorecard_html(course_name, players_data, show_stableford=True, match_play_data=None):
+    """match_play_data: optional dict with 'hole_winners' list (1=T1 won, -1=T2 won, 0=tie/no data) and 'running_total' list of strings."""
     course = COURSES[course_name]
     pars = course["par"]
     si = course["si"]
@@ -628,7 +629,13 @@ def build_scorecard_html(course_name, players_data):
                     s = scores[h] if h < len(scores) else 0
                     if s and s > 0:
                         n = calc_net(s, hdcp, course_name, h)
-                        html += f'<td>{n}</td>'
+                        # Highlight if this player/team won the hole in match play
+                        cell_style = ""
+                        if match_play_data and h < len(match_play_data.get("hole_winners", [])):
+                            hw = match_play_data["hole_winners"][h]
+                            if (pd["team"] == 1 and hw == 1) or (pd["team"] == 2 and hw == -1):
+                                cell_style = ' style="background:#c8e6c9;font-weight:700;color:#1a5a1a;border:2px solid #2a8a2a;border-radius:4px;"'
+                        html += f'<td{cell_style}>{n}</td>'
                         if n: sec_net += n
                     else:
                         html += '<td style="color:#ccc;">-</td>'
@@ -642,8 +649,8 @@ def build_scorecard_html(course_name, players_data):
                     html += f'<td class="total-col">{front_net + sec_net if (front_net + sec_net) else "-"}</td>'
                 html += '</tr>'
 
-            # Stableford row
-            if not course.get("no_handicap"):
+            # Stableford row (only if show_stableford and has handicap)
+            if show_stableford and not course.get("no_handicap"):
                 html += '<tr class="stab-row"><td style="text-align:left;font-size:0.7rem;">PTS</td>'
                 sec_stab = 0
                 for h in range(sec_start, sec_end):
@@ -664,6 +671,31 @@ def build_scorecard_html(course_name, players_data):
                     )
                     html += f'<td class="total-col">{front_stab + sec_stab if (front_stab + sec_stab) else "-"}</td>'
                 html += '</tr>'
+
+        # Match play running total row (if match_play_data provided)
+        if match_play_data:
+            hole_winners = match_play_data.get("hole_winners", [])
+            running = match_play_data.get("running_total", [])
+            # Highlight hole winners row
+            html += '<tr><td style="text-align:left;font-weight:700;font-size:0.7rem;color:#2a5a2a;">MATCH</td>'
+            for h in range(sec_start, sec_end):
+                if h < len(hole_winners):
+                    w = hole_winners[h]
+                    r = running[h] if h < len(running) else ""
+                    if w == 1:
+                        html += f'<td style="background:#c8e6c9;font-weight:700;color:#1a6b9a;border:2px solid #2a8a2a;border-radius:4px;font-size:0.7rem;">{r}</td>'
+                    elif w == -1:
+                        html += f'<td style="background:#ffcdd2;font-weight:700;color:#9a1a1a;border:2px solid #c62828;border-radius:4px;font-size:0.7rem;">{r}</td>'
+                    else:
+                        html += f'<td style="color:#6b8f6b;font-size:0.7rem;">{r}</td>'
+                else:
+                    html += '<td>-</td>'
+            html += '<td class="turn-col"></td>'
+            if sec_label == "IN":
+                # Show final match status
+                final_status = running[-1] if running else ""
+                html += f'<td class="total-col" style="font-size:0.7rem;font-weight:700;">{final_status}</td>'
+            html += '</tr>'
 
         html += '</tbody></table>'
         html_parts.append(html)
@@ -934,8 +966,39 @@ def page_scorecards(data):
              "scores": data["scores"].get(f"{course_name}|{p}", [0]*num_holes)}
             for p in players_to_show
         ]
+
+        # For singles match play, compute hole-by-hole match data
+        mp_data = None
+        if match_type == "singles":
+            p1, p2 = t1_players[0], t2_players[0]
+            s1 = data["scores"].get(f"{course_name}|{p1}", [0]*num_holes)
+            s2 = data["scores"].get(f"{course_name}|{p2}", [0]*num_holes)
+            h1 = get_player_course_hdcp(data, p1, course_name)
+            h2 = get_player_course_hdcp(data, p2, course_name)
+            hole_winners = []
+            running_total = []
+            cum = 0
+            for h in range(num_holes):
+                sv1 = s1[h] if h < len(s1) else 0
+                sv2 = s2[h] if h < len(s2) else 0
+                if sv1 > 0 and sv2 > 0:
+                    n1 = calc_net(sv1, h1, course_name, h)
+                    n2 = calc_net(sv2, h2, course_name, h)
+                    if n1 and n2:
+                        if n1 < n2: cum += 1; hole_winners.append(1)
+                        elif n2 < n1: cum -= 1; hole_winners.append(-1)
+                        else: hole_winners.append(0)
+                    else:
+                        hole_winners.append(0)
+                else:
+                    hole_winners.append(0)
+                if cum > 0: running_total.append(f"S+{cum}")
+                elif cum < 0: running_total.append(f"G+{-cum}")
+                else: running_total.append("AS")
+            mp_data = {"hole_winners": hole_winners, "running_total": running_total}
+
         st.markdown("---")
-        for html in build_scorecard_html(course_name, players_data):
+        for html in build_scorecard_html(course_name, players_data, show_stableford=match["stableford"], match_play_data=mp_data):
             st.markdown(html, unsafe_allow_html=True)
 
         # Best Ball summary for bestball matches
@@ -1056,12 +1119,32 @@ def page_scorecards(data):
         t1_eff = strokes_diff if t1_team_hdcp > t2_team_hdcp else 0
         t2_eff = strokes_diff if t2_team_hdcp > t1_team_hdcp else 0
 
+        # Compute match play hole-by-hole data
+        t1s = data["team_scores"].get(f"{match_idx}|t1", [0]*num_holes)
+        t2s = data["team_scores"].get(f"{match_idx}|t2", [0]*num_holes)
+        hole_winners = []
+        running_total = []
+        cum = 0
+        for h in range(num_holes):
+            if t1s[h] > 0 and t2s[h] > 0:
+                t1n = t1s[h] - get_strokes_on_hole(t1_eff, course["si"][h], num_holes)
+                t2n = t2s[h] - get_strokes_on_hole(t2_eff, course["si"][h], num_holes)
+                if t1n < t2n: cum += 1; hole_winners.append(1)
+                elif t2n < t1n: cum -= 1; hole_winners.append(-1)
+                else: hole_winners.append(0)
+            else:
+                hole_winners.append(0)
+            if cum > 0: running_total.append(f"S+{cum}")
+            elif cum < 0: running_total.append(f"G+{-cum}")
+            else: running_total.append("AS")
+        mp_data = {"hole_winners": hole_winners, "running_total": running_total}
+
         players_data = [
             {"name": "Team Shooter", "team": 1, "handicap": t1_eff, "scores": data["team_scores"].get(f"{match_idx}|t1", [0]*num_holes)},
             {"name": "Team Gilmore", "team": 2, "handicap": t2_eff, "scores": data["team_scores"].get(f"{match_idx}|t2", [0]*num_holes)},
         ]
         st.markdown("---")
-        for html in build_scorecard_html(course_name, players_data):
+        for html in build_scorecard_html(course_name, players_data, show_stableford=match["stableford"], match_play_data=mp_data):
             st.markdown(html, unsafe_allow_html=True)
 
         auto_calc_team_match(data, match_idx, course_name, num_holes, t1_eff, t2_eff)
