@@ -8,6 +8,8 @@ import pandas as pd
 import json
 import os
 import math
+import requests
+import base64
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 
@@ -389,6 +391,35 @@ def load_data():
 def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(st.session_state.data, f, indent=2)
+    # Also commit to GitHub if token is available
+    save_to_github()
+
+
+def save_to_github():
+    """Commit tournament_data.json to the GitHub repo."""
+    token = os.environ.get("GITHUB_TOKEN") or st.secrets.get("GITHUB_TOKEN", "")
+    if not token:
+        return  # No token, skip remote save
+    repo = "CUTSCHR/badonscore"
+    path = "tournament_data.json"
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+    content = json.dumps(st.session_state.data, indent=2)
+    encoded = base64.b64encode(content.encode()).decode()
+    # Get current file SHA
+    resp = requests.get(url, headers=headers, timeout=10)
+    sha = resp.json().get("sha", "") if resp.status_code == 200 else ""
+    payload = {"message": "Update scores", "content": encoded, "branch": "main"}
+    if sha:
+        payload["sha"] = sha
+    requests.put(url, headers=headers, json=payload, timeout=10)
+
+
+def reset_data():
+    """Reset tournament data to defaults."""
+    st.session_state.data = get_default_data()
+    save_data()
+    st.rerun()
 
 
 def get_player_course_hdcp(data, player, course_name):
@@ -1699,6 +1730,8 @@ def main():
         if st.button("Save", use_container_width=True, type="primary"):
             save_data()
             st.success("Saved!")
+        if st.button("Reset All Scores", use_container_width=True):
+            reset_data()
 
     if "Leaderboard" in page: page_leaderboard(data)
     elif "Handicaps" in page: page_handicaps(data)
