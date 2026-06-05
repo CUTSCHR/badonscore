@@ -869,7 +869,7 @@ def page_leaderboard(data):
                     nxt = net_scores[leaders[0]][next_h]
                     if nxt is not None and nxt <= pars[next_h]:
                         total_skins_all[leaders[0]] += 1
-    pot_per_round = 250 * len(ALL_PLAYERS)
+    pot_per_round = 100 * len(ALL_PLAYERS)
     total_all_skins = sum(total_skins_all.values())
     per_skin_all = pot_per_round / total_all_skins if total_all_skins > 0 else 0
     skins_winners = [(p, total_skins_all[p]) for p in ALL_PLAYERS if total_skins_all[p] > 0]
@@ -1452,9 +1452,9 @@ def page_og_belt(data):
 
 def page_skins(data):
     st.markdown('<div class="section-header">Skins</div>', unsafe_allow_html=True)
-    pot_per_round = 250 * len(ALL_PLAYERS)
+    pot_per_round = 100 * len(ALL_PLAYERS)
     st.markdown(f'<p class="money-big">${pot_per_round:,} Pot Per Round</p>', unsafe_allow_html=True)
-    st.caption("$250/round · Must NET par on following hole to collect · H18 validates on H1")
+    st.caption("$100/round · Must NET par on following hole to collect · H18 validates on H1")
     st.markdown("---")
 
     # Grand total across all rounds
