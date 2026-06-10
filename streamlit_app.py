@@ -397,22 +397,33 @@ def save_data():
 
 def save_to_github():
     """Commit tournament_data.json to the GitHub repo."""
-    token = os.environ.get("GITHUB_TOKEN") or st.secrets.get("GITHUB_TOKEN", "")
-    if not token:
-        return  # No token, skip remote save
-    repo = "CUTSCHR/badonscore"
-    path = "tournament_data.json"
-    url = f"https://api.github.com/repos/{repo}/contents/{path}"
-    headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-    content = json.dumps(st.session_state.data, indent=2)
-    encoded = base64.b64encode(content.encode()).decode()
-    # Get current file SHA
-    resp = requests.get(url, headers=headers, timeout=10)
-    sha = resp.json().get("sha", "") if resp.status_code == 200 else ""
-    payload = {"message": "Update scores", "content": encoded, "branch": "main"}
-    if sha:
-        payload["sha"] = sha
-    requests.put(url, headers=headers, json=payload, timeout=10)
+    try:
+        token = os.environ.get("GITHUB_TOKEN", "")
+        if not token:
+            try:
+                token = st.secrets["GITHUB_TOKEN"]
+            except (KeyError, FileNotFoundError):
+                token = ""
+        if not token:
+            st.warning("No GITHUB_TOKEN configured — data saved locally only.")
+            return
+        repo = "CUTSCHR/badonscore"
+        path = "tournament_data.json"
+        url = f"https://api.github.com/repos/{repo}/contents/{path}"
+        headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+        content = json.dumps(st.session_state.data, indent=2)
+        encoded = base64.b64encode(content.encode()).decode()
+        # Get current file SHA
+        resp = requests.get(url, headers=headers, timeout=10)
+        sha = resp.json().get("sha", "") if resp.status_code == 200 else ""
+        payload = {"message": "Update scores", "content": encoded, "branch": "main"}
+        if sha:
+            payload["sha"] = sha
+        put_resp = requests.put(url, headers=headers, json=payload, timeout=10)
+        if put_resp.status_code not in (200, 201):
+            st.error(f"GitHub save failed: {put_resp.status_code} — {put_resp.json().get('message', '')}")
+    except Exception as e:
+        st.error(f"GitHub save error: {e}")
 
 
 def reset_data():

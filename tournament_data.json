@@ -2,7 +2,7 @@
   "handicaps": {
     "Chris Cutshaw": {
       "index": 0.0,
-      "main": 7.0,
+      "main": 7.7,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -13,7 +13,7 @@
     },
     "Ryan Phillips": {
       "index": 0.0,
-      "main": 15.0,
+      "main": 14.3,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -24,7 +24,7 @@
     },
     "Pat Donoho": {
       "index": 0.0,
-      "main": 5.0,
+      "main": 5.9,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -35,7 +35,7 @@
     },
     "Joe Donoho": {
       "index": 0.0,
-      "main": 7.0,
+      "main": 7.4,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -46,7 +46,7 @@
     },
     "Mike Haynes": {
       "index": 0.0,
-      "main": 3.0,
+      "main": 3.5,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -57,7 +57,7 @@
     },
     "Adam Hage": {
       "index": 0.0,
-      "main": 9.0,
+      "main": 9.5,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -68,7 +68,7 @@
     },
     "James Hedges": {
       "index": 0.0,
-      "main": 12.0,
+      "main": 12.2,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -79,7 +79,7 @@
     },
     "Adam Vandercar": {
       "index": 0.0,
-      "main": 0.0,
+      "main": -0.2,
       "Sheep Ranch": 0.0,
       "Pacific Dunes": 0.0,
       "Old Macdonald": 0.0,
@@ -170,7 +170,7 @@
     "1": {
       "t1": [
         "Pat Donoho",
-        "Joe Donoho"
+        "Ryan Phillips"
       ],
       "t2": [
         "James Hedges",
@@ -209,8 +209,8 @@
     },
     "5": {
       "t1": [
-        "Pat Donoho",
-        "Ryan Phillips"
+        "Ryan Phillips",
+        "Joe Donoho"
       ],
       "t2": [
         "Adam Vandercar",
@@ -269,20 +269,20 @@
     },
     "11": {
       "t1": [
-        "Pat Donoho",
+        "Ryan Phillips",
         "Joe Donoho"
       ],
       "t2": [
         "James Hedges",
-        "Adam Vandercar"
+        "Adam Hage"
       ]
     },
     "12": {
       "t1": [
-        "Chris Cutshaw"
+        "Pat Donoho"
       ],
       "t2": [
-        "Mike Haynes"
+        "Adam Vandercar"
       ]
     },
     "13": {
@@ -303,10 +303,10 @@
     },
     "15": {
       "t1": [
-        "Pat Donoho"
+        "Chris Cutshaw"
       ],
       "t2": [
-        "Adam Vandercar"
+        "Mike Haynes"
       ]
     }
   }
