@@ -286,26 +286,31 @@ COURSES = {
         "par": [5,4,3,4,3,4,3,4,4, 4,5,4,5,4,4,3,4,5],
         "si":  [5,13,17,3,11,1,15,7,9, 6,4,2,10,8,14,16,12,18],
         "holes": 18,
+        "slope": 130, "rating": 70.5,
     },
     "Pacific Dunes": {
         "par": [4,4,5,4,3,4,4,4,4, 3,3,5,4,3,5,4,3,5],
         "si":  [9,11,7,3,17,13,1,5,15, 14,18,6,2,16,10,12,8,4],
         "holes": 18,
+        "slope": 131, "rating": 69.5,
     },
     "Old Macdonald": {
         "par": [4,3,4,4,3,5,4,3,4, 4,4,3,4,4,5,4,5,4],
         "si":  [11,15,9,1,17,3,5,13,7, 6,4,16,18,14,12,2,10,8],
         "holes": 18,
+        "slope": 126, "rating": 69.3,
     },
     "Bandon Dunes": {
         "par": [4,3,5,4,4,3,4,4,5, 4,4,3,5,4,3,4,4,5],
         "si":  [13,15,3,5,1,17,7,11,9, 8,2,18,6,16,14,10,12,4],
         "holes": 18,
+        "slope": 131, "rating": 70.2,
     },
     "Bandon Trails": {
         "par": [4,3,5,4,3,4,4,4,5, 4,4,3,4,4,4,5,3,4],
         "si":  [13,17,3,5,15,9,7,11,1, 10,4,18,12,14,8,2,16,6],
         "holes": 18,
+        "slope": 131, "rating": 70.1,
     },
     "Shortys": {
         "par": [3,3,3,3,3,3,3,3,3, 3,3,3,3,3,3,3,3,3,3],
@@ -317,6 +322,7 @@ COURSES = {
         "par": [3,3,3,3,3,3,3,3,3, 3,3,3,3],
         "si":  [13,15,3,5,1,17,7,11,9, 8,2,18,6],
         "holes": 13,
+        "slope": 101, "rating": 34.5,
     },
 }
 
@@ -433,18 +439,43 @@ def reset_data():
     st.rerun()
 
 
+def calc_course_handicap(index, course_name):
+    """Calculate Course Handicap from Handicap Index using slope/rating.
+    Formula: Index × (Slope / 113) + (Course Rating − Par)
+    """
+    course = COURSES.get(course_name, {})
+    slope = course.get("slope")
+    rating = course.get("rating")
+    if not slope or not rating:
+        return index  # No slope data, use index directly
+    par = sum(course["par"])
+    return index * (slope / 113) + (rating - par)
+
+
 def get_player_course_hdcp(data, player, course_name):
+    """Return Course Handicap for this player/course.
+
+    Priority: per-course manual override > auto-calculated from index + slope/rating.
+    """
     h = data["handicaps"].get(player, {})
     course_val = h.get(course_name, 0)
     if course_val and float(course_val) != 0:
         return float(course_val)
-    return float(h.get("main", 0))
+    index = float(h.get("main", 0))
+    return calc_course_handicap(index, course_name)
+
+
+def round_half_up(value):
+    """Round to nearest whole number with .5 rounding away from zero."""
+    if value >= 0:
+        return math.floor(value + 0.5)
+    return math.ceil(value - 0.5)
 
 
 # ─── Calc Helpers ─────────────────────────────────────────────────────────────
 
 def get_strokes_on_hole(handicap, stroke_index, num_holes=18):
-    hdcp = round(handicap)
+    hdcp = round_half_up(handicap)
     if hdcp <= 0:
         return 0
     strokes = 0
@@ -476,13 +507,13 @@ def calc_stableford(net_score, par):
 
 
 def calc_scramble_hdcp(hdcp_a, hdcp_b):
-    return round(0.35 * min(hdcp_a, hdcp_b) + 0.15 * max(hdcp_a, hdcp_b))
+    return round_half_up(0.35 * min(hdcp_a, hdcp_b) + 0.15 * max(hdcp_a, hdcp_b))
 
 
 def calc_altshot_hdcp(hdcp_a, hdcp_b, modified=False):
     if modified:
-        return round(0.6 * min(hdcp_a, hdcp_b) + 0.4 * max(hdcp_a, hdcp_b))
-    return round((hdcp_a + hdcp_b) * 0.5)
+        return round_half_up(0.6 * min(hdcp_a, hdcp_b) + 0.4 * max(hdcp_a, hdcp_b))
+    return round_half_up((hdcp_a + hdcp_b) * 0.5)
 
 
 def get_player_stableford(data, player, course):
@@ -898,22 +929,32 @@ def page_leaderboard(data):
 
 def page_handicaps(data):
     st.markdown("### Handicaps")
-    st.caption("Set each player's course handicap (decimals OK). Expand for per-course overrides.")
+    st.caption("Enter each player's Handicap Index. Course Handicaps are auto-calculated using slope/rating. Expand for manual per-course overrides.")
 
     for player in ALL_PLAYERS:
         team_label = "Team Shooter" if player in TEAM_SHOOTER else "Team Gilmore"
         team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
 
-        col1, col2, col3 = st.columns([3, 1, 4])
+        col1, col2 = st.columns([3, 1])
         with col1:
             main_hdcp = float(data["handicaps"][player].get("main", 0))
             st.markdown(f'<span class="{team_class}" style="font-size:1.1rem;">{player}</span> <span style="color:#8a8a7a;font-size:0.8rem;">({team_label})</span>', unsafe_allow_html=True)
         with col2:
             new_main = st.number_input(
-                "Hdcp", min_value=-5.0, max_value=54.0, step=0.1, value=main_hdcp,
+                "Index", min_value=-5.0, max_value=54.0, step=0.1, value=main_hdcp,
                 format="%.1f", key=f"main_hc_{player}", label_visibility="collapsed"
             )
             data["handicaps"][player]["main"] = new_main
+
+        # Show auto-calculated course handicaps
+        if new_main != 0:
+            course_hdcps = []
+            for course in COURSES:
+                if COURSES[course].get("no_handicap"):
+                    continue
+                ch = calc_course_handicap(new_main, course)
+                course_hdcps.append(f"{course[:8]}: {round_half_up(ch)}")
+            st.caption(" · ".join(course_hdcps))
 
         with st.expander("Per-course overrides", expanded=False):
             cols = st.columns(len(COURSES))
@@ -923,7 +964,7 @@ def page_handicaps(data):
                     course[:8], min_value=-5.0, max_value=54.0, step=0.1, value=current,
                     format="%.1f", key=f"hc_{player}_{course}"
                 )
-            st.caption("Leave at 0 to use main handicap.")
+            st.caption("Leave at 0 to auto-calculate from index + slope/rating.")
         st.markdown("")
 
 
@@ -1621,7 +1662,7 @@ def page_rules():
     st.markdown("""
     <div class="card">
         <div class="card-title">Handicap Calculations</div>
-        <p style="margin:8px 0;"><strong>Course Handicap:</strong> Each player's handicap index is converted to a course handicap for each course using slope/rating. Enter these on the Handicaps tab.</p>
+        <p style="margin:8px 0;"><strong>Course Handicap:</strong> Auto-calculated from your Handicap Index: Index &times; (Slope / 113) + (Course Rating &minus; Par), rounded. Per-course overrides on the Handicaps tab take priority.</p>
         <p style="margin:8px 0;"><strong>Stroke Allocation:</strong> Strokes are allocated by Stroke Index (S.I.). A 10-handicap receives 1 stroke on each of the 10 hardest holes (S.I. 1–10). An 18+ handicap receives 2 strokes on the hardest holes first.</p>
         <hr style="border-color:#e8e4dc;margin:12px 0;">
         <p style="margin:8px 0;font-weight:600;">Team Format Handicaps (calculated as a team, then difference applied):</p>
@@ -1630,7 +1671,7 @@ def page_rules():
             <tbody>
                 <tr class="row-a"><td>Scramble</td><td>35% of low handicap + 15% of high handicap</td></tr>
                 <tr class="row-b"><td>Modified Alt Shot</td><td>60% of low handicap + 40% of high handicap</td></tr>
-                <tr class="row-a"><td>Alt Shot</td><td>50% of combined handicaps</td></tr>
+                <tr class="row-a"><td>Alt Shot</td><td>50% of combined Course Handicaps, rounded .5 up</td></tr>
                 <tr class="row-b"><td>Best Ball / Singles</td><td>Full individual course handicap</td></tr>
             </tbody>
         </table>
