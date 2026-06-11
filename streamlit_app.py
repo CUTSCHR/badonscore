@@ -140,6 +140,7 @@ st.markdown("""
         font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
         background: #ffffff; border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        table-layout: fixed;
     }
     .sc-table th {
         background: #2a5a2a; color: #f5f0e8;
@@ -157,8 +158,9 @@ st.markdown("""
     .sc-table .net-row td { color: #6b8f6b; font-style: italic; }
     .sc-table .stab-row td { color: #2a5a2a; font-weight: 700; }
     .sc-table .player-header { text-align: left; font-weight: 700; padding: 6px 4px 2px; font-size: 0.8rem; white-space: nowrap; }
-    .sc-table .total-col { background: #ffffff !important; font-weight: 700; border-left: 3px solid #2a5a2a; border-right: 2px solid #2a5a2a; }
-    .sc-table .turn-col { background: #ffffff !important; font-weight: 600; border-left: 2px solid #c5d4c5; border-right: 2px solid #c5d4c5; }
+    .sc-table .total-col { background: #1a4a1a !important; color: #ffffff !important; font-weight: 700; font-size: 0.75rem; }
+    .sc-table .turn-col { background: #2a5a2a !important; color: #f5f0e8 !important; font-weight: 700; font-size: 0.75rem; }
+    .sc-table thead .turn-col, .sc-table thead .total-col { background: #1a3a1a !important; color: #ffffff !important; font-size: 0.7rem; letter-spacing: 0.5px; }
 
     /* === Schedule table — white === */
     .sched-table {
@@ -320,7 +322,7 @@ COURSES = {
     },
     "Bandon Preserve": {
         "par": [3,3,3,3,3,3,3,3,3, 3,3,3,3],
-        "si":  [13,15,3,5,1,17,7,11,9, 8,2,18,6],
+        "si":  [9,11,2,4,1,12,5,8,7, 6,3,13,10],
         "holes": 13,
         "slope": 101, "rating": 34.5,
     },
@@ -626,11 +628,12 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
     html_parts = []
 
     for sec_start, sec_end, sec_label in sections:
+        num_cols = sec_end - sec_start
         html = '<table class="sc-table"><thead><tr><th style="text-align:left;width:55px;">HOLE</th>'
         for h in range(sec_start, sec_end):
             html += f'<th>{h+1}</th>'
         html += f'<th class="turn-col">{sec_label}</th>'
-        if sec_label == "IN":
+        if num_holes >= 18:
             html += '<th class="total-col">TOT</th>'
         html += '</tr></thead><tbody>'
 
@@ -640,8 +643,11 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
         for h in range(sec_start, sec_end):
             html += f'<td>{pars[h]}</td>'
         html += f'<td class="turn-col">{sec_par}</td>'
-        if sec_label == "IN":
-            html += f'<td class="total-col">{sum(pars)}</td>'
+        if num_holes >= 18:
+            if sec_label == "IN":
+                html += f'<td class="total-col">{sum(pars)}</td>'
+            else:
+                html += '<td class="total-col"></td>'
         html += '</tr>'
 
         # S.I. row
@@ -650,7 +656,7 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
             for h in range(sec_start, sec_end):
                 html += f'<td style="font-size:0.65rem;">{si[h]}</td>'
             html += '<td class="turn-col"></td>'
-            if sec_label == "IN":
+            if num_holes >= 18:
                 html += '<td class="total-col"></td>'
             html += '</tr>'
 
@@ -667,7 +673,7 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
                     dots = get_strokes_on_hole(hdcp, si[h], num_holes)
                     html += f'<td>{"●" * dots}</td>'
                 html += f'<td class="turn-col" style="font-size:0.7rem;color:#c17a3a;">{hdcp:.0f}</td>'
-                if sec_label == "IN":
+                if num_holes >= 18:
                     html += '<td class="total-col"></td>'
                 html += '</tr>'
             else:
@@ -690,8 +696,11 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
                 else:
                     html += '<td style="color:#ccc;">-</td>'
             html += f'<td class="turn-col">{sec_gross if sec_gross else "-"}</td>'
-            if sec_label == "IN":
-                html += f'<td class="total-col">{total_gross if total_gross else "-"}</td>'
+            if num_holes >= 18:
+                if sec_label == "IN":
+                    html += f'<td class="total-col">{total_gross if total_gross else "-"}</td>'
+                else:
+                    html += '<td class="total-col"></td>'
             html += '</tr>'
 
             # Net row
@@ -713,13 +722,16 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
                     else:
                         html += '<td style="color:#ccc;">-</td>'
                 html += f'<td class="turn-col">{sec_net if sec_net else "-"}</td>'
-                if sec_label == "IN":
-                    front_net = sum(
-                        calc_net(scores[h], hdcp, course_name, h)
-                        for h in range(0, 9)
-                        if h < len(scores) and scores[h] and scores[h] > 0 and calc_net(scores[h], hdcp, course_name, h)
-                    )
-                    html += f'<td class="total-col">{front_net + sec_net if (front_net + sec_net) else "-"}</td>'
+                if num_holes >= 18:
+                    if sec_label == "IN":
+                        front_net = sum(
+                            calc_net(scores[h], hdcp, course_name, h)
+                            for h in range(0, 9)
+                            if h < len(scores) and scores[h] and scores[h] > 0 and calc_net(scores[h], hdcp, course_name, h)
+                        )
+                        html += f'<td class="total-col">{front_net + sec_net if (front_net + sec_net) else "-"}</td>'
+                    else:
+                        html += '<td class="total-col"></td>'
                 html += '</tr>'
 
             # Stableford row (only if show_stableford and has handicap)
@@ -736,13 +748,16 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
                     else:
                         html += '<td style="color:#ccc;">-</td>'
                 html += f'<td class="turn-col">{sec_stab if sec_stab else "-"}</td>'
-                if sec_label == "IN":
-                    front_stab = sum(
-                        calc_stableford(calc_net(scores[h], hdcp, course_name, h), pars[h])
-                        for h in range(0, 9)
-                        if h < len(scores) and scores[h] and scores[h] > 0
-                    )
-                    html += f'<td class="total-col">{front_stab + sec_stab if (front_stab + sec_stab) else "-"}</td>'
+                if num_holes >= 18:
+                    if sec_label == "IN":
+                        front_stab = sum(
+                            calc_stableford(calc_net(scores[h], hdcp, course_name, h), pars[h])
+                            for h in range(0, 9)
+                            if h < len(scores) and scores[h] and scores[h] > 0
+                        )
+                        html += f'<td class="total-col">{front_stab + sec_stab if (front_stab + sec_stab) else "-"}</td>'
+                    else:
+                        html += '<td class="total-col"></td>'
                 html += '</tr>'
 
         # Match play running total row (if match_play_data provided)
@@ -764,10 +779,13 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
                 else:
                     html += '<td>-</td>'
             html += '<td class="turn-col"></td>'
-            if sec_label == "IN":
-                # Show final match status
-                final_status = running[-1] if running else ""
-                html += f'<td class="total-col" style="font-size:0.7rem;font-weight:700;">{final_status}</td>'
+            if num_holes >= 18:
+                if sec_label == "IN":
+                    # Show final match status
+                    final_status = running[-1] if running else ""
+                    html += f'<td class="total-col" style="font-size:0.7rem;font-weight:700;">{final_status}</td>'
+                else:
+                    html += '<td class="total-col"></td>'
             html += '</tr>'
 
         html += '</tbody></table>'
@@ -1098,7 +1116,7 @@ def page_scorecards(data):
                 for h in range(sec_start, sec_end):
                     bb_html += f'<th>{h+1}</th>'
                 bb_html += f'<th class="turn-col">{sec_label}</th>'
-                if sec_label == "IN":
+                if num_holes >= 18:
                     bb_html += '<th class="total-col">TOT</th>'
                 bb_html += '</tr></thead><tbody>'
                 # Par row
@@ -1106,8 +1124,11 @@ def page_scorecards(data):
                 for h in range(sec_start, sec_end):
                     bb_html += f'<td>{pars_bb[h]}</td>'
                 bb_html += f'<td class="turn-col">{sum(pars_bb[sec_start:sec_end])}</td>'
-                if sec_label == "IN":
-                    bb_html += f'<td class="total-col">{sum(pars_bb)}</td>'
+                if num_holes >= 18:
+                    if sec_label == "IN":
+                        bb_html += f'<td class="total-col">{sum(pars_bb)}</td>'
+                    else:
+                        bb_html += '<td class="total-col"></td>'
                 bb_html += '</tr>'
                 for team_name, team_players, team_class in [("Shooter", t1_players, "team-shooter"), ("Gilmore", t2_players, "team-gilmore")]:
                     bb_html += f'<tr><td class="player-header {team_class}">{team_name}</td>'
@@ -1143,8 +1164,11 @@ def page_scorecards(data):
                             if best is not None:
                                 total_bb += best
                     bb_html += f'<td class="turn-col" style="font-weight:700;">{sec_bb if sec_bb else "-"}</td>'
-                    if sec_label == "IN":
-                        bb_html += f'<td class="total-col" style="font-weight:700;">{total_bb if total_bb else "-"}</td>'
+                    if num_holes >= 18:
+                        if sec_label == "IN":
+                            bb_html += f'<td class="total-col" style="font-weight:700;">{total_bb if total_bb else "-"}</td>'
+                        else:
+                            bb_html += '<td class="total-col"></td>'
                     bb_html += '</tr>'
                 bb_html += '</tbody></table>'
                 st.markdown(bb_html, unsafe_allow_html=True)

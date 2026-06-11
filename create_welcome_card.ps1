@@ -168,24 +168,24 @@ for ($i=0; $i -lt $tiles.Count; $i++) {
 }
 
 $scheduleRows = @(
-    @("1","17-Jun","8:40 AM","Scramble","Sheep Ranch","Cutshaw (7.7) + Joe D (7.4)","Haynes (3.5) + Hage (9.5)","Shooter +1"),
-    @("2","17-Jun","8:50 AM","Scramble","Sheep Ranch","Pat D (5.9) + Phillips (14.3)","Hedges (12.2) + Vandercar (-0.2)","Shooter +2"),
-    @("3","17-Jun","2:40 PM","Best Ball","Pacific Dunes","Cutshaw (7) + Phillips (14)","Hage (9) + Hedges (12)","Individual"),
-    @("4","17-Jun","2:50 PM","Best Ball","Pacific Dunes","Pat D (5) + Joe D (7)","Vandercar (0) + Haynes (3)","Individual"),
-    @("5","18-Jun","9:30 AM","Mod Alt Shot","Bandon Dunes","Cutshaw (7.7) + Pat D (5.9)","Hedges (12.2) + Haynes (3.5)","Even"),
-    @("6","18-Jun","9:40 AM","Mod Alt Shot","Bandon Dunes","Phillips (14.3) + Joe D (7.4)","Vandercar (-0.2) + Hage (9.5)","Shooter +6"),
-    @("7","18-Jun","3:45 PM","Scramble","Shortys","Cutshaw (7.7) + Joe D (7.4)","Hage (9.5) + Vandercar (-0.2)","Shooter +2"),
-    @("8","18-Jun","4:00 PM","Scramble","Shortys","Pat D (5.9) + Phillips (14.3)","Hedges (12.2) + Haynes (3.5)","Shooter +1"),
-    @("9","19-Jun","10:40 AM","Best Ball","Old Macdonald","Cutshaw (7) + Phillips (14)","Haynes (3) + Hage (9)","Individual"),
-    @("10","19-Jun","10:50 AM","Best Ball","Old Macdonald","Pat D (5) + Joe D (7)","Hedges (12) + Vandercar (0)","Individual"),
-    @("11","19-Jun","5:00 PM","Alt Shot","Bandon Preserve","Cutshaw (7.7) + Pat D (5.9)","Haynes (3.5) + Vandercar (-0.2)","Shooter +5"),
-    @("12","19-Jun","5:15 PM","Alt Shot","Bandon Preserve","Phillips (14.3) + Joe D (7.4)","Hedges (12.2) + Hage (9.5)","Even"),
-    @("13","20-Jun","11:00 AM","Singles","Bandon Trails","Pat Donoho (5.9)","Vandercar (-0.2)","Shooter +6"),
-    @("14","20-Jun","11:00 AM","Singles","Bandon Trails","Ryan Phillips (14.3)","James Hedges (12.2)","Shooter +2"),
-    @("15","20-Jun","11:10 AM","Singles","Bandon Trails","Joe Donoho (7.4)","Adam Hage (9.5)","Gilmore +2"),
-    @("16","20-Jun","11:10 AM","Singles","Bandon Trails","Chris Cutshaw (7.7)","Mike Haynes (3.5)","Shooter +4")
+    @("1","17-Jun","8:40 AM","Scramble MP","Sheep Ranch","Cutshaw (7) + Joe D (7) = team 4","Haynes (3) + Hage (9) = team 2","Shooter +2"),
+    @("2","17-Jun","8:50 AM","Scramble MP","Sheep Ranch","Pat D (5) + Phillips (15) = team 4","Hedges (12) + Vandercar (-2) = team 1","Shooter +3"),
+    @("3","17-Jun","2:40 PM","Best Ball Stroke","Pacific Dunes","Cutshaw (7) + Phillips (15)","Hage (10) + Hedges (13)","Individual"),
+    @("4","17-Jun","2:50 PM","Best Ball Stroke","Pacific Dunes","Pat D (5) + Joe D (7)","Vandercar (-2) + Haynes (3)","Individual"),
+    @("5","18-Jun","9:30 AM","Mod Alt MP","Bandon Dunes","Cutshaw (7) + Pat D (5) = team 6","Hedges (12) + Haynes (2) = team 6","Even"),
+    @("6","18-Jun","9:40 AM","Mod Alt MP","Bandon Dunes","Phillips (15) + Joe D (7) = team 10","Vandercar (-2) + Hage (9) = team 2","Shooter +8"),
+    @("7","18-Jun","3:45 PM","Scramble MP","Shortys","Cutshaw + Joe","Hage + Vandercar","No HCP"),
+    @("8","18-Jun","4:00 PM","Scramble MP","Shortys","Pat D + Phillips","Hedges + Haynes","No HCP"),
+    @("9","19-Jun","10:40 AM","Best Ball Stroke","Old Macdonald","Cutshaw (7) + Phillips (14)","Haynes (2) + Hage (9)","Individual"),
+    @("10","19-Jun","10:50 AM","Best Ball Stroke","Old Macdonald","Pat D (5) + Joe D (7)","Hedges (12) + Vandercar (-2)","Individual"),
+    @("11","19-Jun","5:00 PM","Alt Shot MP","Bandon Preserve","Cutshaw (2) + Pat D (1) = team 2","Haynes (-1) + Vandercar (-5) = team -3","Shooter +5"),
+    @("12","19-Jun","5:15 PM","Alt Shot MP","Bandon Preserve","Phillips (8) + Joe D (2) = team 5","Hedges (6) + Hage (4) = team 5","Even"),
+    @("13","20-Jun","11:00 AM","Singles MP","Bandon Trails","Pat Donoho (6)","Vandercar (-1)","Shooter +7"),
+    @("14","20-Jun","11:00 AM","Singles MP","Bandon Trails","Ryan Phillips (16)","James Hedges (13)","Shooter +3"),
+    @("15","20-Jun","11:10 AM","Singles MP","Bandon Trails","Joe Donoho (8)","Adam Hage (10)","Gilmore +2"),
+    @("16","20-Jun","11:10 AM","Singles MP","Bandon Trails","Chris Cutshaw (8)","Mike Haynes (3)","Shooter +5")
 )
-Draw-Table $g 90 765 1620 "Tournament Schedule & Match Strokes" @("#","Date","Tee","Format","Course","Team Shooter","Team Gilmore","Strokes") $scheduleRows @(0.45,0.85,1.0,1.1,1.55,2.6,2.65,1.25) 43 19 | Out-Null
+Draw-Table $g 90 765 1620 "Tournament Schedule & Match Strokes" @("#","Date","Tee","Format / Play","Course","Team Shooter (Course HCP)","Team Gilmore (Course HCP)","Strokes") $scheduleRows @(0.35,0.7,0.85,1.25,1.3,3.05,3.1,1.05) 43 16 | Out-Null
 
 $feesRows = @(
     @("Room pp 4 nights @ `$300","`$1,200.00"),
