@@ -142,7 +142,7 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         table-layout: fixed;
     }
-    .sc-table col:first-child { width: 70px; }
+    .sc-table col:first-child { width: 90px; }
     .sc-table th {
         background: #2a5a2a; color: #f5f0e8;
         padding: 5px 4px; text-align: center;
@@ -158,7 +158,7 @@ st.markdown("""
     .sc-table .dot-row td { color: #c17a3a; font-size: 0.9rem; }
     .sc-table .net-row td { color: #6b8f6b; font-style: italic; }
     .sc-table .stab-row td { color: #2a5a2a; font-weight: 700; }
-    .sc-table .player-header { text-align: left; font-weight: 700; padding: 6px 4px 2px; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+    .sc-table .player-header { text-align: left; font-weight: 700; padding: 6px 4px 2px; font-size: 0.75rem; white-space: nowrap; }
     .sc-table .player-header.team-shooter { color: #1a6b9a; }
     .sc-table .player-header.team-gilmore { color: #9a1a1a; }
     .sc-table .total-col { background: #1a4a1a !important; color: #ffffff !important; font-weight: 700; font-size: 0.75rem; }
@@ -634,7 +634,7 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
         num_cols = sec_end - sec_start
         # Total columns = 1 (label) + num_cols (holes) + 1 (turn) + (1 if 18-hole TOT)
         tot_cols = num_cols + 2 + (1 if num_holes >= 18 else 0)
-        html = f'<table class="sc-table"><colgroup><col style="width:70px;">{"<col>" * (tot_cols - 1)}</colgroup>'
+        html = f'<table class="sc-table"><colgroup><col style="width:90px;">{"<col>" * (tot_cols - 1)}</colgroup>'
         html += '<thead><tr><th style="text-align:left;">HOLE</th>'
         for h in range(sec_start, sec_end):
             html += f'<th>{h+1}</th>'
@@ -1120,7 +1120,7 @@ def page_scorecards(data):
             for sec_start, sec_end, sec_label in bb_sections:
                 bb_num_cols = sec_end - sec_start
                 bb_tot_cols = bb_num_cols + 2 + (1 if num_holes >= 18 else 0)
-                bb_html = f'<table class="sc-table"><colgroup><col style="width:70px;">{"<col>" * (bb_tot_cols - 1)}</colgroup>'
+                bb_html = f'<table class="sc-table"><colgroup><col style="width:90px;">{"<col>" * (bb_tot_cols - 1)}</colgroup>'
                 bb_html += '<thead><tr><th style="text-align:left;">TEAM</th>'
                 for h in range(sec_start, sec_end):
                     bb_html += f'<th>{h+1}</th>'
