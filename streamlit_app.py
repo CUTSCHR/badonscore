@@ -142,6 +142,7 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         table-layout: fixed;
     }
+    .sc-table col:first-child { width: 70px; }
     .sc-table th {
         background: #2a5a2a; color: #f5f0e8;
         padding: 5px 4px; text-align: center;
@@ -157,7 +158,9 @@ st.markdown("""
     .sc-table .dot-row td { color: #c17a3a; font-size: 0.9rem; }
     .sc-table .net-row td { color: #6b8f6b; font-style: italic; }
     .sc-table .stab-row td { color: #2a5a2a; font-weight: 700; }
-    .sc-table .player-header { text-align: left; font-weight: 700; padding: 6px 4px 2px; font-size: 0.8rem; white-space: nowrap; }
+    .sc-table .player-header { text-align: left; font-weight: 700; padding: 6px 4px 2px; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+    .sc-table .player-header.team-shooter { color: #1a6b9a; }
+    .sc-table .player-header.team-gilmore { color: #9a1a1a; }
     .sc-table .total-col { background: #1a4a1a !important; color: #ffffff !important; font-weight: 700; font-size: 0.75rem; }
     .sc-table .turn-col { background: #2a5a2a !important; color: #f5f0e8 !important; font-weight: 700; font-size: 0.75rem; }
     .sc-table thead .turn-col, .sc-table thead .total-col { background: #1a3a1a !important; color: #ffffff !important; font-size: 0.7rem; letter-spacing: 0.5px; }
@@ -629,7 +632,10 @@ def build_scorecard_html(course_name, players_data, show_stableford=True, match_
 
     for sec_start, sec_end, sec_label in sections:
         num_cols = sec_end - sec_start
-        html = '<table class="sc-table"><thead><tr><th style="text-align:left;width:55px;">HOLE</th>'
+        # Total columns = 1 (label) + num_cols (holes) + 1 (turn) + (1 if 18-hole TOT)
+        tot_cols = num_cols + 2 + (1 if num_holes >= 18 else 0)
+        html = f'<table class="sc-table"><colgroup><col style="width:70px;">{"<col>" * (tot_cols - 1)}</colgroup>'
+        html += '<thead><tr><th style="text-align:left;">HOLE</th>'
         for h in range(sec_start, sec_end):
             html += f'<th>{h+1}</th>'
         html += f'<th class="turn-col">{sec_label}</th>'
@@ -1112,7 +1118,10 @@ def page_scorecards(data):
             else:
                 bb_sections = [(0, num_holes, "TOT")]
             for sec_start, sec_end, sec_label in bb_sections:
-                bb_html = '<table class="sc-table"><thead><tr><th style="text-align:left;width:55px;">TEAM</th>'
+                bb_num_cols = sec_end - sec_start
+                bb_tot_cols = bb_num_cols + 2 + (1 if num_holes >= 18 else 0)
+                bb_html = f'<table class="sc-table"><colgroup><col style="width:70px;">{"<col>" * (bb_tot_cols - 1)}</colgroup>'
+                bb_html += '<thead><tr><th style="text-align:left;">TEAM</th>'
                 for h in range(sec_start, sec_end):
                     bb_html += f'<th>{h+1}</th>'
                 bb_html += f'<th class="turn-col">{sec_label}</th>'
