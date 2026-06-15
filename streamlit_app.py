@@ -1719,23 +1719,95 @@ def page_bets(data):
     # Total entry: $100/round × 3 rounds skins = $300 per player
     skins_entry = 100 * len(STABLEFORD_COURSES_LIST)
 
+    # ── Skins winnings ──
+    skins_winnings = {p: grand_skins[p] * per_skin_val for p in ALL_PLAYERS}
+
+    # ── Team Championship: $500 between teams ──
+    TEAM_BET = 500
+    team_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    t1_pts, t2_pts = calc_team_totals(data)
+    if t1_pts >= WIN_THRESHOLD:
+        # Team Shooter wins
+        for p in TEAM_SHOOTER:
+            team_winnings[p] = TEAM_BET / len(TEAM_SHOOTER)
+        for p in TEAM_GILMORE:
+            team_winnings[p] = -TEAM_BET / len(TEAM_GILMORE)
+    elif t2_pts >= WIN_THRESHOLD:
+        # Team Gilmore wins
+        for p in TEAM_GILMORE:
+            team_winnings[p] = TEAM_BET / len(TEAM_GILMORE)
+        for p in TEAM_SHOOTER:
+            team_winnings[p] = -TEAM_BET / len(TEAM_SHOOTER)
+
+    # ── Individual Championship: $500 winner-take-all (NET Stableford) ──
+    INDIVIDUAL_PRIZE = 500
+    indiv_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    stab_totals = [(p, sum(get_player_stableford(data, p, c) for c in STABLEFORD_COURSES_LIST)) for p in ALL_PLAYERS]
+    stab_totals.sort(key=lambda x: x[1], reverse=True)
+    if stab_totals[0][1] > 0:
+        indiv_winner = stab_totals[0][0]
+        per_player_cost = INDIVIDUAL_PRIZE / (len(ALL_PLAYERS) - 1)
+        for p in ALL_PLAYERS:
+            if p == indiv_winner:
+                indiv_winnings[p] = INDIVIDUAL_PRIZE
+            else:
+                indiv_winnings[p] = -per_player_cost
+
+    # ── OG Belt: $750 buy-in · 1st: $2,000 · 2nd: $1,000 ──
+    OG_BUYIN = 750
+    OG_FIRST = 2000
+    OG_SECOND = 1000
+    og_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    og_scores = {}
+    for player in OGS:
+        og_scores[player] = {}
+        for course in STABLEFORD_COURSES_LIST:
+            og_scores[player][course] = get_player_gross_stableford(data, player, course)
+    rank_pts = calc_og_rank_pts(og_scores)
+    og_team_pts = calc_og_team_bonus(data)
+    og_final = []
+    for player in OGS:
+        bonus = og_team_pts[player] * 0.5
+        og_final.append((player, rank_pts[player] + bonus))
+    og_final.sort(key=lambda x: x[1], reverse=True)
+    # Only pay out if at least one OG has points
+    if og_final[0][1] > 0:
+        og_winnings[og_final[0][0]] = OG_FIRST - OG_BUYIN   # +$1,250
+        og_winnings[og_final[1][0]] = OG_SECOND - OG_BUYIN  # +$250
+        og_winnings[og_final[2][0]] = -OG_BUYIN              # -$750
+        og_winnings[og_final[3][0]] = -OG_BUYIN              # -$750
+
+    # ── Combined winnings ──
+    total_entry = skins_entry + (TEAM_BET / len(TEAM_SHOOTER))  # $300 skins + $125 team
+    # Individual and OG are net (built-in), no separate entry tracking needed
+    net_winnings = {p: skins_winnings[p] - skins_entry + team_winnings[p] + indiv_winnings[p] + og_winnings[p] for p in ALL_PLAYERS}
+
+    # Show competition summaries
+    t1_status = f"🏆 Shooter wins" if t1_pts >= WIN_THRESHOLD else (f"🏆 Gilmore wins" if t2_pts >= WIN_THRESHOLD else f"In progress ({t1_pts:g}–{t2_pts:g})")
+    indiv_leader = stab_totals[0][0].split()[0] if stab_totals[0][1] > 0 else "TBD"
+    og_leader = og_final[0][0].split()[0] if og_final[0][1] > 0 else "TBD"
+
+    st.markdown(f"""
+**Competitions:**
+- **Team Championship** · $500 between teams · {t1_status}
+- **Individual Championship** · $500 winner-take-all · Leader: {indiv_leader}
+- **OG Belt** · $750 buy-in (1st $2K / 2nd $1K) · Leader: {og_leader}
+- **Skins** · $100/round × 3 = $300/player · ${skins_per_round} pot/round
+""")
+
     # Build winnings table
-    winnings = {p: 0.0 for p in ALL_PLAYERS}
-    for p in ALL_PLAYERS:
-        winnings[p] += grand_skins[p] * per_skin_val
+    win_data = [(p, grand_skins[p], skins_winnings[p], team_winnings[p], indiv_winnings[p], og_winnings[p], net_winnings[p]) for p in ALL_PLAYERS]
+    win_data.sort(key=lambda x: x[6], reverse=True)
 
-    # Show winnings summary
-    win_data = [(p, grand_skins[p], winnings[p], winnings[p] - skins_entry) for p in ALL_PLAYERS]
-    win_data.sort(key=lambda x: x[3], reverse=True)
-
-    st.markdown(f"**Skins:** $100/player/round × 3 rounds = **${skins_entry}/player entry** · ${skins_per_round} pot/round")
-
-    win_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Skins</th><th>Winnings</th><th>Net (+/-)</th></tr></thead><tbody>'
-    for player, skins, won, net in win_data:
+    win_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Skins</th><th>Team</th><th>Indiv</th><th>OG</th><th>Net (+/-)</th></tr></thead><tbody>'
+    for player, skins, skin_won, team_w, indiv_w, og_w, net in win_data:
         team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
         net_color = "#2a5a2a" if net >= 0 else "#9a1a1a"
         net_str = f"+${net:,.0f}" if net >= 0 else f"-${abs(net):,.0f}"
-        win_html += f'<tr><td class="{team_class}">{player}</td><td>{skins}</td><td>${won:,.0f}</td><td style="color:{net_color};font-weight:700;">{net_str}</td></tr>'
+        team_str = f"+${team_w:,.0f}" if team_w > 0 else (f"-${abs(team_w):,.0f}" if team_w < 0 else "—")
+        indiv_str = f"+${indiv_w:,.0f}" if indiv_w > 0 else (f"-${abs(indiv_w):,.0f}" if indiv_w < 0 else "—")
+        og_str = f"+${og_w:,.0f}" if og_w > 0 else (f"-${abs(og_w):,.0f}" if og_w < 0 else "—")
+        win_html += f'<tr><td class="{team_class}">{player}</td><td>{skins} (${skin_won:,.0f})</td><td>{team_str}</td><td>{indiv_str}</td><td>{og_str}</td><td style="color:{net_color};font-weight:700;">{net_str}</td></tr>'
     win_html += '</tbody></table>'
     st.markdown(win_html, unsafe_allow_html=True)
 
@@ -1832,8 +1904,12 @@ def page_bets(data):
     </div>
     """, unsafe_allow_html=True)
 
-    # Calculate net balances from ledger
+    # Calculate net balances: competitions + ledger
     balances = {p: 0.0 for p in ALL_PLAYERS}
+
+    # Include competition winnings in settlement
+    for p in ALL_PLAYERS:
+        balances[p] += net_winnings[p]
 
     for entry in data["ledger"]:
         if entry["type"] == "side_bet":
