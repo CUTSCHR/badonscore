@@ -1724,40 +1724,45 @@ def page_bets(data):
 
     # ── Team Championship: $500 between teams ──
     TEAM_BET = 500
-    team_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    TEAM_ENTRY = TEAM_BET / len(TEAM_SHOOTER)  # $125/player
+    team_winnings = {p: -TEAM_ENTRY for p in ALL_PLAYERS}  # everyone at risk until decided
     t1_pts, t2_pts = calc_team_totals(data)
+    team_decided = False
     if t1_pts >= WIN_THRESHOLD:
-        # Team Shooter wins
+        team_decided = True
         for p in TEAM_SHOOTER:
-            team_winnings[p] = TEAM_BET / len(TEAM_SHOOTER)
+            team_winnings[p] = TEAM_ENTRY  # net +$125 (get your $125 back + $125 from loser)
         for p in TEAM_GILMORE:
-            team_winnings[p] = -TEAM_BET / len(TEAM_GILMORE)
+            team_winnings[p] = -TEAM_ENTRY
     elif t2_pts >= WIN_THRESHOLD:
-        # Team Gilmore wins
+        team_decided = True
         for p in TEAM_GILMORE:
-            team_winnings[p] = TEAM_BET / len(TEAM_GILMORE)
+            team_winnings[p] = TEAM_ENTRY
         for p in TEAM_SHOOTER:
-            team_winnings[p] = -TEAM_BET / len(TEAM_SHOOTER)
+            team_winnings[p] = -TEAM_ENTRY
 
     # ── Individual Championship: $500 winner-take-all (NET Stableford) ──
     INDIVIDUAL_PRIZE = 500
-    indiv_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    INDIV_ENTRY = INDIVIDUAL_PRIZE / (len(ALL_PLAYERS) - 1)  # ~$71.43/player
+    indiv_winnings = {p: -INDIV_ENTRY for p in ALL_PLAYERS}  # everyone at risk
     stab_totals = [(p, sum(get_player_stableford(data, p, c) for c in STABLEFORD_COURSES_LIST)) for p in ALL_PLAYERS]
     stab_totals.sort(key=lambda x: x[1], reverse=True)
-    if stab_totals[0][1] > 0:
+    indiv_decided = stab_totals[0][1] > 0
+    if indiv_decided:
         indiv_winner = stab_totals[0][0]
-        per_player_cost = INDIVIDUAL_PRIZE / (len(ALL_PLAYERS) - 1)
         for p in ALL_PLAYERS:
             if p == indiv_winner:
-                indiv_winnings[p] = INDIVIDUAL_PRIZE
+                indiv_winnings[p] = INDIVIDUAL_PRIZE - INDIV_ENTRY  # net +$428.57
             else:
-                indiv_winnings[p] = -per_player_cost
+                indiv_winnings[p] = -INDIV_ENTRY
 
     # ── OG Belt: $750 buy-in · 1st: $2,000 · 2nd: $1,000 ──
     OG_BUYIN = 750
     OG_FIRST = 2000
     OG_SECOND = 1000
     og_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    for p in OGS:
+        og_winnings[p] = -OG_BUYIN  # all OGs at risk of buy-in
     og_scores = {}
     for player in OGS:
         og_scores[player] = {}
@@ -1770,17 +1775,15 @@ def page_bets(data):
         bonus = og_team_pts[player] * 0.5
         og_final.append((player, rank_pts[player] + bonus))
     og_final.sort(key=lambda x: x[1], reverse=True)
-    # Only pay out if at least one OG has points
-    if og_final[0][1] > 0:
+    og_decided = og_final[0][1] > 0
+    if og_decided:
         og_winnings[og_final[0][0]] = OG_FIRST - OG_BUYIN   # +$1,250
         og_winnings[og_final[1][0]] = OG_SECOND - OG_BUYIN  # +$250
         og_winnings[og_final[2][0]] = -OG_BUYIN              # -$750
         og_winnings[og_final[3][0]] = -OG_BUYIN              # -$750
 
     # ── Combined winnings ──
-    total_entry = skins_entry + (TEAM_BET / len(TEAM_SHOOTER))  # $300 skins + $125 team
-    # Individual and OG are net (built-in), no separate entry tracking needed
-    net_winnings = {p: skins_winnings[p] - skins_entry + team_winnings[p] + indiv_winnings[p] + og_winnings[p] for p in ALL_PLAYERS}
+    net_winnings = {p: (skins_winnings[p] - skins_entry) + team_winnings[p] + indiv_winnings[p] + og_winnings[p] for p in ALL_PLAYERS}
 
     # Show competition summaries
     t1_status = f"🏆 Shooter wins" if t1_pts >= WIN_THRESHOLD else (f"🏆 Gilmore wins" if t2_pts >= WIN_THRESHOLD else f"In progress ({t1_pts:g}–{t2_pts:g})")
@@ -1804,8 +1807,8 @@ def page_bets(data):
         team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
         net_color = "#2a5a2a" if net >= 0 else "#9a1a1a"
         net_str = f"+${net:,.0f}" if net >= 0 else f"-${abs(net):,.0f}"
-        team_str = f"+${team_w:,.0f}" if team_w > 0 else (f"-${abs(team_w):,.0f}" if team_w < 0 else "—")
-        indiv_str = f"+${indiv_w:,.0f}" if indiv_w > 0 else (f"-${abs(indiv_w):,.0f}" if indiv_w < 0 else "—")
+        team_str = f"+${team_w:,.0f}" if team_w > 0 else (f"-${abs(team_w):,.0f}" if team_w < 0 else "$0")
+        indiv_str = f"+${indiv_w:,.0f}" if indiv_w > 0 else (f"-${abs(indiv_w):,.0f}" if indiv_w < 0 else "$0")
         og_str = f"+${og_w:,.0f}" if og_w > 0 else (f"-${abs(og_w):,.0f}" if og_w < 0 else "—")
         win_html += f'<tr><td class="{team_class}">{player}</td><td>{skins} (${skin_won:,.0f})</td><td>{team_str}</td><td>{indiv_str}</td><td>{og_str}</td><td style="color:{net_color};font-weight:700;">{net_str}</td></tr>'
     win_html += '</tbody></table>'
