@@ -1722,16 +1722,15 @@ def page_bets(data):
     # ── Skins winnings ──
     skins_winnings = {p: grand_skins[p] * per_skin_val for p in ALL_PLAYERS}
 
-    # ── Team Championship: $500 between teams ──
-    TEAM_BET = 500
-    TEAM_ENTRY = TEAM_BET / len(TEAM_SHOOTER)  # $125/player
-    team_winnings = {p: -TEAM_ENTRY for p in ALL_PLAYERS}  # everyone at risk until decided
+    # ── Team Championship: $500/person ──
+    TEAM_ENTRY = 500  # each player risks $500
+    team_winnings = {p: -TEAM_ENTRY for p in ALL_PLAYERS}
     t1_pts, t2_pts = calc_team_totals(data)
     team_decided = False
     if t1_pts >= WIN_THRESHOLD:
         team_decided = True
         for p in TEAM_SHOOTER:
-            team_winnings[p] = TEAM_ENTRY  # net +$125 (get your $125 back + $125 from loser)
+            team_winnings[p] = TEAM_ENTRY
         for p in TEAM_GILMORE:
             team_winnings[p] = -TEAM_ENTRY
     elif t2_pts >= WIN_THRESHOLD:
@@ -1741,10 +1740,9 @@ def page_bets(data):
         for p in TEAM_SHOOTER:
             team_winnings[p] = -TEAM_ENTRY
 
-    # ── Individual Championship: $500 winner-take-all (NET Stableford) ──
-    INDIVIDUAL_PRIZE = 500
-    INDIV_ENTRY = INDIVIDUAL_PRIZE / (len(ALL_PLAYERS) - 1)  # ~$71.43/player
-    indiv_winnings = {p: -INDIV_ENTRY for p in ALL_PLAYERS}  # everyone at risk
+    # ── Individual Championship: $500/person to winner ──
+    INDIV_ENTRY = 500  # each player risks $500
+    indiv_winnings = {p: -INDIV_ENTRY for p in ALL_PLAYERS}
     stab_totals = [(p, sum(get_player_stableford(data, p, c) for c in STABLEFORD_COURSES_LIST)) for p in ALL_PLAYERS]
     stab_totals.sort(key=lambda x: x[1], reverse=True)
     indiv_decided = stab_totals[0][1] > 0
@@ -1752,7 +1750,7 @@ def page_bets(data):
         indiv_winner = stab_totals[0][0]
         for p in ALL_PLAYERS:
             if p == indiv_winner:
-                indiv_winnings[p] = INDIVIDUAL_PRIZE - INDIV_ENTRY  # net +$428.57
+                indiv_winnings[p] = INDIV_ENTRY * (len(ALL_PLAYERS) - 1)  # winner collects from 7 others
             else:
                 indiv_winnings[p] = -INDIV_ENTRY
 
@@ -1792,10 +1790,10 @@ def page_bets(data):
 
     st.markdown(f"""
 **Competitions:**
-- **Team Championship** · $500 between teams · {t1_status}
-- **Individual Championship** · $500 winner-take-all · Leader: {indiv_leader}
-- **OG Belt** · $750 buy-in (1st $2K / 2nd $1K) · Leader: {og_leader}
-- **Skins** · $100/round × 3 = $300/player · ${skins_per_round} pot/round
+- **Team Championship** &middot; $500/player &middot; {t1_status}
+- **Individual Championship** &middot; $500/player to winner &middot; Leader: {indiv_leader}
+- **OG Belt** &middot; $750 buy-in (1st $2K, 2nd $1K) &middot; Leader: {og_leader}
+- **Skins** &middot; $100/player/round &middot; ${skins_per_round} pot/round
 """)
 
     # Build winnings table
