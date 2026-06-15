@@ -372,6 +372,7 @@ def get_default_data():
         "team_results": [None] * len(SCHEDULE),
         "og_team_pts": {p: 0 for p in OGS},
         "pairings": {},
+        "ledger": [],
     }
 
 
@@ -1666,6 +1667,237 @@ def page_skins(data):
             st.caption(f"Skins: {txt}")
 
 
+def page_bets(data):
+    st.markdown('<div class="section-header">Bets & Ledger</div>', unsafe_allow_html=True)
+
+    # Initialize ledger in data if missing
+    if "ledger" not in data:
+        data["ledger"] = []
+
+    # ─── Section 1: Winnings Calculator ─────────────────────────────────────
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Tournament Winnings Summary</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Entry fee
+    entry_fee = st.number_input("Entry Fee per Player ($)", value=100, step=25, key="bet_entry_fee")
+    total_pot = entry_fee * len(ALL_PLAYERS)
+
+    # Pot allocation
+    st.markdown("**Pot Allocation**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        skins_pct = st.number_input("Skins %", value=50, min_value=0, max_value=100, key="bet_skins_pct")
+    with col2:
+        indiv_pct = st.number_input("Individual Champ %", value=30, min_value=0, max_value=100, key="bet_indiv_pct")
+    with col3:
+        team_pct = st.number_input("Team Champ %", value=20, min_value=0, max_value=100, key="bet_team_pct")
+
+    alloc_total = skins_pct + indiv_pct + team_pct
+    if alloc_total != 100:
+        st.warning(f"Allocation totals {alloc_total}% — should be 100%")
+
+    skins_pot = total_pot * skins_pct / 100
+    indiv_pot = total_pot * indiv_pct / 100
+    team_pot = total_pot * team_pct / 100
+
+    st.markdown(f"**Total Pot: ${total_pot:,.0f}** — Skins: ${skins_pot:,.0f} · Individual: ${indiv_pot:,.0f} · Team: ${team_pot:,.0f}")
+
+    # Calculate skins winnings from data
+    from collections import defaultdict
+    STABLEFORD_COURSES_LIST = ["Pacific Dunes", "Old Macdonald", "Bandon Trails"]
+    grand_skins = {p: 0 for p in ALL_PLAYERS}
+
+    for course_name in STABLEFORD_COURSES_LIST:
+        if course_name not in COURSES:
+            continue
+        course = COURSES[course_name]
+        pars = course["par"]
+        num_holes = course["holes"]
+        net_scores = {}
+        for player in ALL_PLAYERS:
+            key = f"{course_name}|{player}"
+            scores = data["scores"].get(key, [0] * num_holes)
+            hdcp = get_player_course_hdcp(data, player, course_name)
+            net_scores[player] = [
+                calc_net(scores[i], hdcp, course_name, i)
+                if i < len(scores) and scores[i] and scores[i] > 0 else None
+                for i in range(num_holes)
+            ]
+        for h in range(num_holes):
+            hole_nets = {p: net_scores[p][h] for p in ALL_PLAYERS if net_scores[p][h] is not None}
+            if hole_nets:
+                min_net = min(hole_nets.values())
+                leaders = [p for p, n in hole_nets.items() if n == min_net]
+                if len(leaders) == 1:
+                    next_h = (h + 1) % num_holes
+                    nxt = net_scores[leaders[0]][next_h]
+                    if nxt is not None and nxt <= pars[next_h]:
+                        grand_skins[leaders[0]] += 1
+
+    total_skins = sum(grand_skins.values())
+    per_skin_val = skins_pot / total_skins if total_skins > 0 else 0
+
+    # Build winnings table
+    winnings = {p: 0.0 for p in ALL_PLAYERS}
+    for p in ALL_PLAYERS:
+        winnings[p] += grand_skins[p] * per_skin_val
+
+    # Show winnings summary
+    win_data = [(p, grand_skins[p], winnings[p], winnings[p] - entry_fee) for p in ALL_PLAYERS]
+    win_data.sort(key=lambda x: x[3], reverse=True)
+
+    win_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Skins</th><th>Winnings</th><th>Net (+/-)</th></tr></thead><tbody>'
+    for player, skins, won, net in win_data:
+        team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
+        net_color = "#2a5a2a" if net >= 0 else "#9a1a1a"
+        net_str = f"+${net:,.0f}" if net >= 0 else f"-${abs(net):,.0f}"
+        win_html += f'<tr><td class="{team_class}">{player}</td><td>{skins}</td><td>${won:,.0f}</td><td style="color:{net_color};font-weight:700;">{net_str}</td></tr>'
+    win_html += '</tbody></table>'
+    st.markdown(win_html, unsafe_allow_html=True)
+
+    # ─── Section 2: Side Bets Ledger ────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Side Bets & Group Purchases</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("*Record side bets between players or group purchases (food, drinks, etc.)*")
+
+    # Add new ledger entry
+    with st.expander("➕ Add Ledger Entry", expanded=False):
+        entry_type = st.radio("Type", ["Side Bet", "Group Purchase"], key="ledger_type", horizontal=True)
+
+        if entry_type == "Side Bet":
+            col1, col2 = st.columns(2)
+            with col1:
+                bet_from = st.selectbox("Loser (owes)", ALL_PLAYERS, key="bet_from")
+            with col2:
+                bet_to = st.selectbox("Winner (gets paid)", ALL_PLAYERS, key="bet_to")
+            bet_amount = st.number_input("Amount ($)", value=10.0, min_value=0.0, step=5.0, key="bet_amount")
+            bet_desc = st.text_input("Description", placeholder="e.g., Nassau press on hole 14", key="bet_desc")
+
+            if st.button("Add Side Bet", key="add_bet"):
+                if bet_from == bet_to:
+                    st.error("Can't bet against yourself!")
+                elif bet_amount <= 0:
+                    st.error("Amount must be positive")
+                else:
+                    data["ledger"].append({
+                        "type": "side_bet",
+                        "from": bet_from,
+                        "to": bet_to,
+                        "amount": bet_amount,
+                        "desc": bet_desc or "Side bet",
+                    })
+                    st.success(f"Added: {bet_from} owes {bet_to} ${bet_amount:.0f}")
+                    st.rerun()
+
+        else:  # Group Purchase
+            purchaser = st.selectbox("Who paid?", ALL_PLAYERS, key="purchase_by")
+            purchase_amount = st.number_input("Total Amount ($)", value=50.0, min_value=0.0, step=5.0, key="purchase_amount")
+            purchase_desc = st.text_input("What was it?", placeholder="e.g., Beers at the turn", key="purchase_desc")
+            split_among = st.multiselect("Split among", ALL_PLAYERS, default=ALL_PLAYERS, key="purchase_split")
+
+            if st.button("Add Group Purchase", key="add_purchase"):
+                if not split_among:
+                    st.error("Select at least one person to split with")
+                elif purchase_amount <= 0:
+                    st.error("Amount must be positive")
+                else:
+                    data["ledger"].append({
+                        "type": "group_purchase",
+                        "paid_by": purchaser,
+                        "amount": purchase_amount,
+                        "desc": purchase_desc or "Group purchase",
+                        "split_among": split_among,
+                    })
+                    st.success(f"Added: {purchaser} paid ${purchase_amount:.0f} split among {len(split_among)} people")
+                    st.rerun()
+
+    # Display current ledger
+    if data["ledger"]:
+        st.markdown("**Current Ledger**")
+        ledger_html = '<table class="sched-table"><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Details</th><th>Amount</th></tr></thead><tbody>'
+        for i, entry in enumerate(data["ledger"]):
+            row_class = "row-a" if i % 2 == 0 else "row-b"
+            if entry["type"] == "side_bet":
+                details = f"{entry['from']} → {entry['to']}"
+                ledger_html += f'<tr class="{row_class}"><td>{i+1}</td><td>🎲 Bet</td><td>{entry["desc"]}</td><td>{details}</td><td>${entry["amount"]:.0f}</td></tr>'
+            else:
+                split_names = ", ".join(p.split()[0] for p in entry["split_among"])
+                details = f"{entry['paid_by']} paid · split: {split_names}"
+                ledger_html += f'<tr class="{row_class}"><td>{i+1}</td><td>🛒 Purchase</td><td>{entry["desc"]}</td><td>{details}</td><td>${entry["amount"]:.0f}</td></tr>'
+        ledger_html += '</tbody></table>'
+        st.markdown(ledger_html, unsafe_allow_html=True)
+
+        # Delete entry
+        with st.expander("🗑️ Remove Entry"):
+            del_idx = st.number_input("Entry # to remove", min_value=1, max_value=len(data["ledger"]), value=1, key="del_ledger_idx")
+            if st.button("Remove", key="del_ledger"):
+                data["ledger"].pop(del_idx - 1)
+                st.success("Removed!")
+                st.rerun()
+
+    # ─── Section 3: Settlement - Who Owes Who ───────────────────────────────
+    st.markdown("---")
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">Settlement — Who Owes Who</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Calculate net balances from ledger
+    balances = {p: 0.0 for p in ALL_PLAYERS}
+
+    for entry in data["ledger"]:
+        if entry["type"] == "side_bet":
+            balances[entry["from"]] -= entry["amount"]
+            balances[entry["to"]] += entry["amount"]
+        elif entry["type"] == "group_purchase":
+            share = entry["amount"] / len(entry["split_among"])
+            balances[entry["paid_by"]] += entry["amount"]  # they paid
+            for p in entry["split_among"]:
+                balances[p] -= share  # everyone owes their share
+
+    # Simplify debts - greedy algorithm
+    debtors = [(p, -balances[p]) for p in ALL_PLAYERS if balances[p] < -0.01]
+    creditors = [(p, balances[p]) for p in ALL_PLAYERS if balances[p] > 0.01]
+    debtors.sort(key=lambda x: x[1], reverse=True)
+    creditors.sort(key=lambda x: x[1], reverse=True)
+
+    settlements = []
+    d_idx, c_idx = 0, 0
+    d_amounts = [amt for _, amt in debtors]
+    c_amounts = [amt for _, amt in creditors]
+
+    while d_idx < len(debtors) and c_idx < len(creditors):
+        pay = min(d_amounts[d_idx], c_amounts[c_idx])
+        if pay > 0.01:
+            settlements.append((debtors[d_idx][0], creditors[c_idx][0], pay))
+        d_amounts[d_idx] -= pay
+        c_amounts[c_idx] -= pay
+        if d_amounts[d_idx] < 0.01:
+            d_idx += 1
+        if c_amounts[c_idx] < 0.01:
+            c_idx += 1
+
+    if settlements:
+        settle_html = '<table class="lb-table"><thead><tr><th>From</th><th>To</th><th>Amount</th></tr></thead><tbody>'
+        for payer, payee, amount in settlements:
+            payer_class = "team-shooter" if payer in TEAM_SHOOTER else "team-gilmore"
+            payee_class = "team-shooter" if payee in TEAM_SHOOTER else "team-gilmore"
+            settle_html += f'<tr><td class="{payer_class}">{payer}</td><td class="{payee_class}">{payee}</td><td style="font-weight:700;color:#2a5a2a;font-size:1.2rem;">${amount:,.2f}</td></tr>'
+        settle_html += '</tbody></table>'
+        st.markdown(settle_html, unsafe_allow_html=True)
+    else:
+        st.info("No ledger entries yet — add side bets or purchases above.")
+
+
 def page_rules():
     st.markdown('<div class="section-header">Rules & Scoring</div>', unsafe_allow_html=True)
 
@@ -1798,6 +2030,7 @@ def main():
             "Individual Championship",
             "OG Belt",
             "Skins",
+            "Bets & Ledger",
             "Rules",
         ], label_visibility="collapsed")
 
@@ -1826,6 +2059,7 @@ def main():
     elif "Individual" in page: page_individual(data)
     elif "OG Belt" in page: page_og_belt(data)
     elif "Skins" in page: page_skins(data)
+    elif "Bets" in page: page_bets(data)
     elif "Rules" in page: page_rules()
 
     st.session_state.data = data
