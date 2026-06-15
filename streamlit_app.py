@@ -1674,40 +1674,16 @@ def page_bets(data):
     if "ledger" not in data:
         data["ledger"] = []
 
-    # ─── Section 1: Winnings Calculator ─────────────────────────────────────
+    # ─── Section 1: Winnings Summary (auto from competitions) ────────────────
     st.markdown("""
     <div class="card">
         <div class="card-title">Tournament Winnings Summary</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Entry fee
-    entry_fee = st.number_input("Entry Fee per Player ($)", value=100, step=25, key="bet_entry_fee")
-    total_pot = entry_fee * len(ALL_PLAYERS)
-
-    # Pot allocation
-    st.markdown("**Pot Allocation**")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        skins_pct = st.number_input("Skins %", value=50, min_value=0, max_value=100, key="bet_skins_pct")
-    with col2:
-        indiv_pct = st.number_input("Individual Champ %", value=30, min_value=0, max_value=100, key="bet_indiv_pct")
-    with col3:
-        team_pct = st.number_input("Team Champ %", value=20, min_value=0, max_value=100, key="bet_team_pct")
-
-    alloc_total = skins_pct + indiv_pct + team_pct
-    if alloc_total != 100:
-        st.warning(f"Allocation totals {alloc_total}% — should be 100%")
-
-    skins_pot = total_pot * skins_pct / 100
-    indiv_pot = total_pot * indiv_pct / 100
-    team_pot = total_pot * team_pct / 100
-
-    st.markdown(f"**Total Pot: ${total_pot:,.0f}** — Skins: ${skins_pot:,.0f} · Individual: ${indiv_pot:,.0f} · Team: ${team_pot:,.0f}")
-
-    # Calculate skins winnings from data
-    from collections import defaultdict
+    # Skins: $100/player/round × 3 rounds = $800/round pot
     STABLEFORD_COURSES_LIST = ["Pacific Dunes", "Old Macdonald", "Bandon Trails"]
+    skins_per_round = 100 * len(ALL_PLAYERS)  # $800/round
     grand_skins = {p: 0 for p in ALL_PLAYERS}
 
     for course_name in STABLEFORD_COURSES_LIST:
@@ -1738,7 +1714,10 @@ def page_bets(data):
                         grand_skins[leaders[0]] += 1
 
     total_skins = sum(grand_skins.values())
-    per_skin_val = skins_pot / total_skins if total_skins > 0 else 0
+    per_skin_val = skins_per_round / total_skins if total_skins > 0 else 0
+
+    # Total entry: $100/round × 3 rounds skins = $300 per player
+    skins_entry = 100 * len(STABLEFORD_COURSES_LIST)
 
     # Build winnings table
     winnings = {p: 0.0 for p in ALL_PLAYERS}
@@ -1746,8 +1725,10 @@ def page_bets(data):
         winnings[p] += grand_skins[p] * per_skin_val
 
     # Show winnings summary
-    win_data = [(p, grand_skins[p], winnings[p], winnings[p] - entry_fee) for p in ALL_PLAYERS]
+    win_data = [(p, grand_skins[p], winnings[p], winnings[p] - skins_entry) for p in ALL_PLAYERS]
     win_data.sort(key=lambda x: x[3], reverse=True)
+
+    st.markdown(f"**Skins:** $100/player/round × 3 rounds = **${skins_entry}/player entry** · ${skins_per_round} pot/round")
 
     win_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Skins</th><th>Winnings</th><th>Net (+/-)</th></tr></thead><tbody>'
     for player, skins, won, net in win_data:
