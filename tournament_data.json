@@ -369,6 +369,13 @@
       "to": "Joe Donoho",
       "amount": 500.0,
       "desc": "Side bet"
+    },
+    {
+      "type": "side_bet",
+      "from": "Adam Hage",
+      "to": "Chris Cutshaw",
+      "amount": 500.0,
+      "desc": "Side bet"
     }
   ]
 }
