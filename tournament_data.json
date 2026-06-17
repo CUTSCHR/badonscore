@@ -362,6 +362,13 @@
         "Pat Donoho",
         "Joe Donoho"
       ]
+    },
+    {
+      "type": "side_bet",
+      "from": "Mike Haynes",
+      "to": "Joe Donoho",
+      "amount": 500.0,
+      "desc": "Side bet"
     }
   ]
 }
