@@ -1848,6 +1848,7 @@ def page_bets(data):
                         "amount": bet_amount,
                         "desc": bet_desc or "Side bet",
                     })
+                    save_data()
                     st.success(f"Added: {bet_from} owes {bet_to} ${bet_amount:.0f}")
                     st.rerun()
 
@@ -1870,6 +1871,7 @@ def page_bets(data):
                         "desc": purchase_desc or "Group purchase",
                         "split_among": split_among,
                     })
+                    save_data()
                     st.success(f"Added: {purchaser} paid ${purchase_amount:.0f} split among {len(split_among)} people")
                     st.rerun()
 
@@ -1894,6 +1896,7 @@ def page_bets(data):
             del_idx = st.number_input("Entry # to remove", min_value=1, max_value=len(data["ledger"]), value=1, key="del_ledger_idx")
             if st.button("Remove", key="del_ledger"):
                 data["ledger"].pop(del_idx - 1)
+                save_data()
                 st.success("Removed!")
                 st.rerun()
 
