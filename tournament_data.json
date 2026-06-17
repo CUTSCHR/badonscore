@@ -92,48 +92,48 @@
   "scores": {},
   "team_scores": {
     "0|t1": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
+      3,
+      3,
+      3,
+      3,
+      4,
+      4,
+      3,
+      4,
+      3,
+      4,
+      4,
+      4,
+      4,
+      3,
+      5,
+      4,
+      4,
+      5
     ],
     "0|t2": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
+      3,
+      5,
+      2,
+      4,
+      3,
+      4,
+      3,
+      4,
+      4,
+      4,
+      4,
+      4,
+      5,
+      4,
+      4,
+      3,
+      4,
+      6
     ]
   },
   "team_results": [
-    null,
+    "T1",
     null,
     null,
     null,
@@ -309,5 +309,19 @@
         "Mike Haynes"
       ]
     }
-  }
+  },
+  "ledger": [
+    {
+      "type": "group_purchase",
+      "paid_by": "Chris Cutshaw",
+      "amount": 403.0,
+      "desc": "First night sushi dinner ",
+      "split_among": [
+        "Chris Cutshaw",
+        "Ryan Phillips",
+        "Pat Donoho",
+        "Joe Donoho"
+      ]
+    }
+  ]
 }
