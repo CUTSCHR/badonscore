@@ -537,6 +537,13 @@
       "to": "Chris Cutshaw",
       "amount": 500.0,
       "desc": "Side bet"
+    },
+    {
+      "type": "side_bet",
+      "from": "Mike Haynes",
+      "to": "Joe Donoho",
+      "amount": 100.0,
+      "desc": "Side bet"
     }
   ]
 }
