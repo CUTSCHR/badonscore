@@ -1732,7 +1732,7 @@ def page_bets(data):
 
     # ── Team Championship: $500/person ──
     TEAM_ENTRY = 500  # each player risks $500
-    team_winnings = {p: -TEAM_ENTRY for p in ALL_PLAYERS}
+    team_winnings = {p: 0 for p in ALL_PLAYERS}
     t1_pts, t2_pts = calc_team_totals(data)
     team_decided = False
     if t1_pts >= WIN_THRESHOLD:
@@ -1751,11 +1751,13 @@ def page_bets(data):
     # ── Individual Championship: $500/person · 1st $2000 · 2nd $1250 · 3rd $750 ──
     INDIV_ENTRY = 500  # each player risks $500
     INDIV_PAYOUTS = [2000, 1250, 750]  # 1st, 2nd, 3rd
-    indiv_winnings = {p: -INDIV_ENTRY for p in ALL_PLAYERS}
+    indiv_winnings = {p: 0 for p in ALL_PLAYERS}
     stab_totals = [(p, sum(get_player_stableford(data, p, c) for c in STABLEFORD_COURSES_LIST)) for p in ALL_PLAYERS]
     stab_totals.sort(key=lambda x: x[1], reverse=True)
     indiv_decided = stab_totals[0][1] > 0
     if indiv_decided:
+        for p in ALL_PLAYERS:
+            indiv_winnings[p] = -INDIV_ENTRY
         for place, payout in enumerate(INDIV_PAYOUTS):
             if place < len(stab_totals):
                 indiv_winnings[stab_totals[place][0]] = payout - INDIV_ENTRY
@@ -1765,8 +1767,6 @@ def page_bets(data):
     OG_FIRST = 2000
     OG_SECOND = 1000
     og_winnings = {p: 0.0 for p in ALL_PLAYERS}
-    for p in OGS:
-        og_winnings[p] = -OG_BUYIN  # all OGs at risk of buy-in
     og_scores = {}
     for player in OGS:
         og_scores[player] = {}
