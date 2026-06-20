@@ -562,29 +562,26 @@ def calc_team_totals(data):
 
 
 def calc_og_rank_pts(og_scores):
-    """Calculate OG rank points, splitting evenly when tied. Skip courses where nobody has scores."""
+    """Calculate OG rank points based on total gross stableford across all 3 rounds."""
     rank_pts = {p: 0.0 for p in OGS}
     pts_pool = [4, 3, 2, 1]
-    for course in STABLEFORD_COURSES:
-        # Skip course if all players have 0 (not yet played)
-        course_scores = [og_scores[p][course] for p in OGS]
-        if all(s == 0 for s in course_scores):
-            continue
-        scores_list = [(p, og_scores[p][course]) for p in OGS]
-        scores_list.sort(key=lambda x: x[1], reverse=True)
-        i = 0
-        while i < len(scores_list):
-            # Find all tied at this score
-            tied = [scores_list[i]]
-            j = i + 1
-            while j < len(scores_list) and scores_list[j][1] == scores_list[i][1]:
-                tied.append(scores_list[j])
-                j += 1
-            # Split the points for tied positions
-            shared_pts = sum(pts_pool[k] for k in range(i, min(j, len(pts_pool)))) / len(tied)
-            for player, _ in tied:
-                rank_pts[player] += shared_pts
-            i = j
+    # Sum across all courses for each player
+    totals = [(p, sum(og_scores[p].get(c, 0) for c in STABLEFORD_COURSES)) for p in OGS]
+    # Skip if nobody has any scores
+    if all(t == 0 for _, t in totals):
+        return rank_pts
+    totals.sort(key=lambda x: x[1], reverse=True)
+    i = 0
+    while i < len(totals):
+        tied = [totals[i]]
+        j = i + 1
+        while j < len(totals) and totals[j][1] == totals[i][1]:
+            tied.append(totals[j])
+            j += 1
+        shared_pts = sum(pts_pool[k] for k in range(i, min(j, len(pts_pool)))) / len(tied)
+        for player, _ in tied:
+            rank_pts[player] += shared_pts
+        i = j
     return rank_pts
 
 
@@ -911,6 +908,8 @@ def page_leaderboard(data):
 
     # Skins summary
     st.markdown('<div class="section-header">Skins Summary</div>', unsafe_allow_html=True)
+    pot_per_round = 100 * len(ALL_PLAYERS)
+    total_winnings = {p: 0.0 for p in ALL_PLAYERS}
     total_skins_all = {p: 0 for p in ALL_PLAYERS}
     for course_name in STABLEFORD_COURSES:
         course = COURSES[course_name]
@@ -926,6 +925,7 @@ def page_leaderboard(data):
                 if i < len(scores) and scores[i] and scores[i] > 0 else None
                 for i in range(num_holes)
             ]
+        round_skins = {p: 0 for p in ALL_PLAYERS}
         for h in range(num_holes):
             hole_nets = {p: net_scores[p][h] for p in ALL_PLAYERS if net_scores[p][h] is not None}
             if hole_nets:
@@ -935,17 +935,19 @@ def page_leaderboard(data):
                     next_h = (h + 1) % num_holes
                     nxt = net_scores[leaders[0]][next_h]
                     if nxt is not None and nxt <= pars[next_h]:
-                        total_skins_all[leaders[0]] += 1
-    pot_per_round = 100 * len(ALL_PLAYERS)
-    total_all_skins = sum(total_skins_all.values())
-    per_skin_all = pot_per_round / total_all_skins if total_all_skins > 0 else 0
-    skins_winners = [(p, total_skins_all[p]) for p in ALL_PLAYERS if total_skins_all[p] > 0]
-    skins_winners.sort(key=lambda x: x[1], reverse=True)
+                        round_skins[leaders[0]] += 1
+        round_total = sum(round_skins.values())
+        per_skin = pot_per_round / round_total if round_total > 0 else 0
+        for p in ALL_PLAYERS:
+            total_skins_all[p] += round_skins[p]
+            total_winnings[p] += round_skins[p] * per_skin
+    skins_winners = [(p, total_skins_all[p], total_winnings[p]) for p in ALL_PLAYERS if total_skins_all[p] > 0]
+    skins_winners.sort(key=lambda x: x[2], reverse=True)
     if skins_winners:
         sk_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Skins</th><th>Winnings</th></tr></thead><tbody>'
-        for player, count in skins_winners:
+        for player, count, winnings in skins_winners:
             team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
-            sk_html += f'<tr><td class="{team_class}">{player}</td><td>{count}</td><td style="font-weight:700;color:#2a5a2a;font-size:1.1rem;">${count * per_skin_all:,.0f}</td></tr>'
+            sk_html += f'<tr><td class="{team_class}">{player}</td><td>{count}</td><td style="font-weight:700;color:#2a5a2a;font-size:1.1rem;">${winnings:,.0f}</td></tr>'
         sk_html += '</tbody></table>'
         st.markdown(sk_html, unsafe_allow_html=True)
     else:
@@ -1487,7 +1489,7 @@ def page_individual(data):
 def page_og_belt(data):
     st.markdown('<div class="section-header">OG Belt</div>', unsafe_allow_html=True)
     st.markdown('<p class="money-big">$750 Buy-in &middot; 1st: $2,000 &middot; 2nd: $1,000</p>', unsafe_allow_html=True)
-    st.caption("Gross Stableford rank (4/3/2/1) + 0.5 per team point")
+    st.caption("Gross Stableford total across 3 rounds → rank (4/3/2/1) + 0.5 per team win")
     st.markdown("---")
 
     og_scores = {}
@@ -1579,20 +1581,25 @@ def page_skins(data):
 
         for p in ALL_PLAYERS:
             grand_skins[p] += skins_count[p]
-        all_course_data[course_name] = {"net_scores": net_scores, "skins_count": skins_count, "skin_holes": skin_holes}
+        round_total_skins = sum(skins_count.values())
+        round_per_skin = pot_per_round / round_total_skins if round_total_skins > 0 else 0
+        all_course_data[course_name] = {"net_scores": net_scores, "skins_count": skins_count, "skin_holes": skin_holes, "per_skin": round_per_skin}
 
-    # Grand summary table
-    total_all_skins = sum(grand_skins.values())
-    per_skin = pot_per_round / total_all_skins if total_all_skins > 0 else 0
-    winners = [(p, grand_skins[p]) for p in ALL_PLAYERS if grand_skins[p] > 0]
-    winners.sort(key=lambda x: x[1], reverse=True)
+    # Grand summary table — calculate winnings per round independently
+    grand_winnings = {p: 0.0 for p in ALL_PLAYERS}
+    for course_name in STABLEFORD_COURSES:
+        cd = all_course_data[course_name]
+        for p in ALL_PLAYERS:
+            grand_winnings[p] += cd["skins_count"][p] * cd["per_skin"]
+    winners = [(p, grand_skins[p], grand_winnings[p]) for p in ALL_PLAYERS if grand_skins[p] > 0]
+    winners.sort(key=lambda x: x[2], reverse=True)
 
     st.markdown("**Overall Skins Standings**")
     if winners:
         win_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Skins</th><th>Winnings</th></tr></thead><tbody>'
-        for player, count in winners:
+        for player, count, winnings in winners:
             team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
-            win_html += f'<tr><td class="{team_class}">{player}</td><td style="font-size:1.1rem;">{count}</td><td style="font-weight:700;color:#2a5a2a;font-family:Playfair Display,serif;font-size:1.4rem;">${count * per_skin:,.0f}</td></tr>'
+            win_html += f'<tr><td class="{team_class}">{player}</td><td style="font-size:1.1rem;">{count}</td><td style="font-weight:700;color:#2a5a2a;font-family:Playfair Display,serif;font-size:1.4rem;">${winnings:,.0f}</td></tr>'
         win_html += '</tbody></table>'
         st.markdown(win_html, unsafe_allow_html=True)
     else:
@@ -2027,17 +2034,17 @@ def page_rules():
     st.markdown("""
     <div class="card">
         <div class="card-title">OG Belt (Gross Stableford · OGs Only)</div>
-        <p style="margin:8px 0;">Same 3 courses. Uses <strong>GROSS</strong> Stableford (no handicap adjustment). Players are ranked 1st–4th on each course with rank points:</p>
+        <p style="margin:8px 0;">Same 3 courses. Uses <strong>GROSS</strong> Stableford (no handicap adjustment). Total gross stableford points across all 3 rounds determines ranking:</p>
         <table class="sched-table" style="margin-top:8px;">
             <thead><tr><th>Rank</th><th>Points</th></tr></thead>
             <tbody>
-                <tr class="row-a"><td>1st</td><td>4</td></tr>
+                <tr class="row-a"><td>1st (highest total)</td><td>4</td></tr>
                 <tr class="row-b"><td>2nd</td><td>3</td></tr>
                 <tr class="row-a"><td>3rd</td><td>2</td></tr>
                 <tr class="row-b"><td>4th</td><td>1</td></tr>
             </tbody>
         </table>
-        <p style="margin:8px 0;">Ties split the points evenly. A team bonus of +1 is added for each winning team match an OG participated in. Highest total wins the OG Belt.</p>
+        <p style="margin:8px 0;">Ties split the points evenly. A team bonus of +0.5 is added for each winning team match an OG participated in. Highest total wins the OG Belt.</p>
     </div>
     """, unsafe_allow_html=True)
 
