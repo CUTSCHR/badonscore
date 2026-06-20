@@ -1692,6 +1692,7 @@ def page_bets(data):
     STABLEFORD_COURSES_LIST = ["Pacific Dunes", "Old Macdonald", "Bandon Trails"]
     skins_per_round = 100 * len(ALL_PLAYERS)  # $800/round
     grand_skins = {p: 0 for p in ALL_PLAYERS}
+    skins_winnings = {p: 0.0 for p in ALL_PLAYERS}
 
     for course_name in STABLEFORD_COURSES_LIST:
         if course_name not in COURSES:
@@ -1709,6 +1710,7 @@ def page_bets(data):
                 if i < len(scores) and scores[i] and scores[i] > 0 else None
                 for i in range(num_holes)
             ]
+        round_skins = {p: 0 for p in ALL_PLAYERS}
         for h in range(num_holes):
             hole_nets = {p: net_scores[p][h] for p in ALL_PLAYERS if net_scores[p][h] is not None}
             if hole_nets:
@@ -1718,16 +1720,15 @@ def page_bets(data):
                     next_h = (h + 1) % num_holes
                     nxt = net_scores[leaders[0]][next_h]
                     if nxt is not None and nxt <= pars[next_h]:
-                        grand_skins[leaders[0]] += 1
-
-    total_skins = sum(grand_skins.values())
-    per_skin_val = skins_per_round / total_skins if total_skins > 0 else 0
+                        round_skins[leaders[0]] += 1
+        round_total = sum(round_skins.values())
+        per_skin_val = skins_per_round / round_total if round_total > 0 else 0
+        for p in ALL_PLAYERS:
+            grand_skins[p] += round_skins[p]
+            skins_winnings[p] += round_skins[p] * per_skin_val
 
     # Total entry: $100/round × 3 rounds skins = $300 per player
     skins_entry = 100 * len(STABLEFORD_COURSES_LIST)
-
-    # ── Skins winnings ──
-    skins_winnings = {p: grand_skins[p] * per_skin_val for p in ALL_PLAYERS}
 
     # ── Team Championship: $500/person ──
     TEAM_ENTRY = 500  # each player risks $500
@@ -1747,19 +1748,17 @@ def page_bets(data):
         for p in TEAM_SHOOTER:
             team_winnings[p] = -TEAM_ENTRY
 
-    # ── Individual Championship: $500/person to winner ──
+    # ── Individual Championship: $500/person · 1st $2000 · 2nd $1250 · 3rd $750 ──
     INDIV_ENTRY = 500  # each player risks $500
+    INDIV_PAYOUTS = [2000, 1250, 750]  # 1st, 2nd, 3rd
     indiv_winnings = {p: -INDIV_ENTRY for p in ALL_PLAYERS}
     stab_totals = [(p, sum(get_player_stableford(data, p, c) for c in STABLEFORD_COURSES_LIST)) for p in ALL_PLAYERS]
     stab_totals.sort(key=lambda x: x[1], reverse=True)
     indiv_decided = stab_totals[0][1] > 0
     if indiv_decided:
-        indiv_winner = stab_totals[0][0]
-        for p in ALL_PLAYERS:
-            if p == indiv_winner:
-                indiv_winnings[p] = INDIV_ENTRY * (len(ALL_PLAYERS) - 1)  # winner collects from 7 others
-            else:
-                indiv_winnings[p] = -INDIV_ENTRY
+        for place, payout in enumerate(INDIV_PAYOUTS):
+            if place < len(stab_totals):
+                indiv_winnings[stab_totals[place][0]] = payout - INDIV_ENTRY
 
     # ── OG Belt: $750 buy-in · 1st: $2,000 · 2nd: $1,000 ──
     OG_BUYIN = 750
@@ -1798,7 +1797,7 @@ def page_bets(data):
     st.markdown(f"""
 **Competitions:**
 - **Team Championship** &middot; $500/player &middot; {t1_status}
-- **Individual Championship** &middot; $500/player to winner &middot; Leader: {indiv_leader}
+- **Individual Championship** &middot; $500/player (1st $2K, 2nd $1.25K, 3rd $750) &middot; Leader: {indiv_leader}
 - **OG Belt** &middot; $750 buy-in (1st $2K, 2nd $1K) &middot; Leader: {og_leader}
 - **Skins** &middot; $100/player/round &middot; ${skins_per_round} pot/round
 """)
@@ -2027,7 +2026,7 @@ def page_rules():
                 <tr class="row-b"><td>Double bogey or worse (≥ +2)</td><td><strong>0</strong></td></tr>
             </tbody>
         </table>
-        <p style="margin:8px 0;">Total Stableford points across all 3 rounds determines the Individual Champion.</p>
+        <p style="margin:8px 0;">Total Stableford points across all 3 rounds determines the Individual Champion. <strong>Payouts:</strong> 1st $2,000 · 2nd $1,250 · 3rd $750.</p>
     </div>
     """, unsafe_allow_html=True)
 
