@@ -935,6 +935,13 @@
       "to": "Chris Cutshaw",
       "amount": 100.0,
       "desc": "Press back nice at Pacific "
+    },
+    {
+      "type": "side_bet",
+      "from": "Adam Hage",
+      "to": "Chris Cutshaw",
+      "amount": 200.0,
+      "desc": "Side bet"
     }
   ]
 }
