@@ -1109,6 +1109,13 @@
       "to": "Adam Hage",
       "amount": 1000.0,
       "desc": "total bet chubs"
+    },
+    {
+      "type": "side_bet",
+      "from": "Ryan Phillips",
+      "to": "Adam Hage",
+      "amount": 398.0,
+      "desc": "Snake"
     }
   ]
 }
