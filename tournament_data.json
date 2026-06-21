@@ -1057,18 +1057,6 @@
   },
   "ledger": [
     {
-      "type": "group_purchase",
-      "paid_by": "Chris Cutshaw",
-      "amount": 403.0,
-      "desc": "First night sushi dinner ",
-      "split_among": [
-        "Chris Cutshaw",
-        "Ryan Phillips",
-        "Pat Donoho",
-        "Joe Donoho"
-      ]
-    },
-    {
       "type": "side_bet",
       "from": "Mike Haynes",
       "to": "Joe Donoho",
