@@ -1111,6 +1111,18 @@
       "to": "Chris Cutshaw",
       "amount": 398.0,
       "desc": "Snake 2nd man"
+    },
+    {
+      "type": "group_purchase",
+      "paid_by": "Chris Cutshaw",
+      "amount": 403.0,
+      "desc": "First night Losers Dinners",
+      "split_among": [
+        "Chris Cutshaw",
+        "Ryan Phillips",
+        "Pat Donoho",
+        "Joe Donoho"
+      ]
     }
   ]
 }
