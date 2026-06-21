@@ -1914,29 +1914,106 @@ def page_bets(data):
     </div>
     """, unsafe_allow_html=True)
 
-    # Calculate net balances: competitions + ledger
-    balances = {p: 0.0 for p in ALL_PLAYERS}
+    # ── Step 1: Calculate pairwise side bet settlements ──
+    pair_bets = {}  # (player_a, player_b) → net amount A owes B (positive = A pays B)
+    for entry in data["ledger"]:
+        if entry["type"] == "side_bet":
+            a, b = entry["from"], entry["to"]
+            # Normalize key so we always use alphabetical order
+            key = tuple(sorted([a, b]))
+            if key not in pair_bets:
+                pair_bets[key] = 0.0
+            # Positive means key[0] owes key[1]
+            if a == key[0]:
+                pair_bets[key] += entry["amount"]
+            else:
+                pair_bets[key] -= entry["amount"]
+
+    # ── Step 2: Calculate group purchase debts (pairwise to payer) ──
+    expense_debts = {}  # (debtor, creditor) → amount
+    for entry in data["ledger"]:
+        if entry["type"] == "group_purchase":
+            payer = entry["paid_by"]
+            share = entry["amount"] / len(entry["split_among"])
+            for p in entry["split_among"]:
+                if p != payer:
+                    key = tuple(sorted([p, payer]))
+                    if key not in expense_debts:
+                        expense_debts[key] = 0.0
+                    if p == key[0]:
+                        expense_debts[key] += share  # key[0] owes key[1]
+                    else:
+                        expense_debts[key] -= share
+
+    # ── Step 3: Competition pool settlements (skins, team, indiv, OG) ──
+    # These are pool-based - use greedy algorithm for competition money only
+    comp_debtors = [(p, -net_winnings[p]) for p in ALL_PLAYERS if net_winnings[p] < -0.01]
+    comp_creditors = [(p, net_winnings[p]) for p in ALL_PLAYERS if net_winnings[p] > 0.01]
+    comp_debtors.sort(key=lambda x: x[1], reverse=True)
+    comp_creditors.sort(key=lambda x: x[1], reverse=True)
+
+    comp_settlements = []
+    d_idx, c_idx = 0, 0
+    d_amounts = [amt for _, amt in comp_debtors]
+    c_amounts = [amt for _, amt in comp_creditors]
+    while d_idx < len(comp_debtors) and c_idx < len(comp_creditors):
+        pay = min(d_amounts[d_idx], c_amounts[c_idx])
+        if pay > 0.01:
+            comp_settlements.append((comp_debtors[d_idx][0], comp_creditors[c_idx][0], pay))
+        d_amounts[d_idx] -= pay
+        c_amounts[c_idx] -= pay
+        if d_amounts[d_idx] < 0.01:
+            d_idx += 1
+        if c_amounts[c_idx] < 0.01:
+            c_idx += 1
+
+    # ── Step 4: Combine all pairwise debts into final settlements ──
+    # Merge competition settlements into pairwise format
+    final_pairs = {}  # (a, b) sorted → net amount a owes b
+    for payer, payee, amount in comp_settlements:
+        key = tuple(sorted([payer, payee]))
+        if key not in final_pairs:
+            final_pairs[key] = 0.0
+        if payer == key[0]:
+            final_pairs[key] += amount
+        else:
+            final_pairs[key] -= amount
+
+    # Add side bets
+    for key, amount in pair_bets.items():
+        if key not in final_pairs:
+            final_pairs[key] = 0.0
+        final_pairs[key] += amount
+
+    # Add expense debts
+    for key, amount in expense_debts.items():
+        if key not in final_pairs:
+            final_pairs[key] = 0.0
+        final_pairs[key] += amount
+
+    # Build final payment list
+    settlements = []
+    for (a, b), net_amt in final_pairs.items():
+        if net_amt > 0.01:
+            settlements.append((a, b, net_amt))  # a pays b
+        elif net_amt < -0.01:
+            settlements.append((b, a, abs(net_amt)))  # b pays a
+    settlements.sort(key=lambda x: x[2], reverse=True)
+
+    # ── Show balance overview ──
     ledger_net = {p: 0.0 for p in ALL_PLAYERS}
-
-    # Include competition winnings in settlement
-    for p in ALL_PLAYERS:
-        balances[p] += net_winnings[p]
-
     for entry in data["ledger"]:
         if entry["type"] == "side_bet":
             ledger_net[entry["from"]] -= entry["amount"]
             ledger_net[entry["to"]] += entry["amount"]
         elif entry["type"] == "group_purchase":
             share = entry["amount"] / len(entry["split_among"])
-            ledger_net[entry["paid_by"]] += entry["amount"]  # they paid
+            ledger_net[entry["paid_by"]] += entry["amount"]
             for p in entry["split_among"]:
-                ledger_net[p] -= share  # everyone owes their share
+                ledger_net[p] -= share
 
-    for p in ALL_PLAYERS:
-        balances[p] += ledger_net[p]
-
-    # Show balance breakdown so users can see the math
-    bal_data = [(p, net_winnings[p], ledger_net[p], balances[p]) for p in ALL_PLAYERS]
+    total_balance = {p: net_winnings[p] + ledger_net[p] for p in ALL_PLAYERS}
+    bal_data = [(p, net_winnings[p], ledger_net[p], total_balance[p]) for p in ALL_PLAYERS]
     bal_data.sort(key=lambda x: x[3], reverse=True)
     bal_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Competitions</th><th>Ledger</th><th>Total Balance</th></tr></thead><tbody>'
     for player, comp, ledg, total in bal_data:
@@ -1951,30 +2028,8 @@ def page_bets(data):
     bal_html += '</tbody></table>'
     st.markdown(bal_html, unsafe_allow_html=True)
 
+    # ── Show pairwise payments ──
     st.markdown("")
-
-    # Simplify debts - greedy algorithm
-    debtors = [(p, -balances[p]) for p in ALL_PLAYERS if balances[p] < -0.01]
-    creditors = [(p, balances[p]) for p in ALL_PLAYERS if balances[p] > 0.01]
-    debtors.sort(key=lambda x: x[1], reverse=True)
-    creditors.sort(key=lambda x: x[1], reverse=True)
-
-    settlements = []
-    d_idx, c_idx = 0, 0
-    d_amounts = [amt for _, amt in debtors]
-    c_amounts = [amt for _, amt in creditors]
-
-    while d_idx < len(debtors) and c_idx < len(creditors):
-        pay = min(d_amounts[d_idx], c_amounts[c_idx])
-        if pay > 0.01:
-            settlements.append((debtors[d_idx][0], creditors[c_idx][0], pay))
-        d_amounts[d_idx] -= pay
-        c_amounts[c_idx] -= pay
-        if d_amounts[d_idx] < 0.01:
-            d_idx += 1
-        if c_amounts[c_idx] < 0.01:
-            c_idx += 1
-
     if settlements:
         settle_html = '<table class="lb-table"><thead><tr><th>From</th><th>To</th><th>Amount</th></tr></thead><tbody>'
         for payer, payee, amount in settlements:
@@ -1984,7 +2039,7 @@ def page_bets(data):
         settle_html += '</tbody></table>'
         st.markdown(settle_html, unsafe_allow_html=True)
     else:
-        st.info("No ledger entries yet — add side bets or purchases above.")
+        st.info("No settlements to show yet.")
 
 
 def page_rules():
