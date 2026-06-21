@@ -1102,6 +1102,13 @@
       "to": "Chris Cutshaw",
       "amount": 200.0,
       "desc": "Side bet"
+    },
+    {
+      "type": "side_bet",
+      "from": "Chris Cutshaw",
+      "to": "Adam Hage",
+      "amount": 1000.0,
+      "desc": "total bet chubs"
     }
   ]
 }
