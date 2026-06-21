@@ -1116,6 +1116,13 @@
       "to": "Adam Hage",
       "amount": 398.0,
       "desc": "Snake"
+    },
+    {
+      "type": "side_bet",
+      "from": "Ryan Phillips",
+      "to": "Chris Cutshaw",
+      "amount": 398.0,
+      "desc": "Snake 2nd man"
     }
   ]
 }
