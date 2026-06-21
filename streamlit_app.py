@@ -1916,6 +1916,7 @@ def page_bets(data):
 
     # Calculate net balances: competitions + ledger
     balances = {p: 0.0 for p in ALL_PLAYERS}
+    ledger_net = {p: 0.0 for p in ALL_PLAYERS}
 
     # Include competition winnings in settlement
     for p in ALL_PLAYERS:
@@ -1923,13 +1924,34 @@ def page_bets(data):
 
     for entry in data["ledger"]:
         if entry["type"] == "side_bet":
-            balances[entry["from"]] -= entry["amount"]
-            balances[entry["to"]] += entry["amount"]
+            ledger_net[entry["from"]] -= entry["amount"]
+            ledger_net[entry["to"]] += entry["amount"]
         elif entry["type"] == "group_purchase":
             share = entry["amount"] / len(entry["split_among"])
-            balances[entry["paid_by"]] += entry["amount"]  # they paid
+            ledger_net[entry["paid_by"]] += entry["amount"]  # they paid
             for p in entry["split_among"]:
-                balances[p] -= share  # everyone owes their share
+                ledger_net[p] -= share  # everyone owes their share
+
+    for p in ALL_PLAYERS:
+        balances[p] += ledger_net[p]
+
+    # Show balance breakdown so users can see the math
+    bal_data = [(p, net_winnings[p], ledger_net[p], balances[p]) for p in ALL_PLAYERS]
+    bal_data.sort(key=lambda x: x[3], reverse=True)
+    bal_html = '<table class="lb-table"><thead><tr><th>Player</th><th>Competitions</th><th>Ledger</th><th>Total Balance</th></tr></thead><tbody>'
+    for player, comp, ledg, total in bal_data:
+        team_class = "team-shooter" if player in TEAM_SHOOTER else "team-gilmore"
+        def fmt(v):
+            if v > 0.01: return f'<span style="color:#2a5a2a;">+${v:,.0f}</span>'
+            elif v < -0.01: return f'<span style="color:#9a1a1a;">-${abs(v):,.0f}</span>'
+            else: return '$0'
+        tot_color = "#2a5a2a" if total >= 0 else "#9a1a1a"
+        tot_str = f"+${total:,.0f}" if total >= 0 else f"-${abs(total):,.0f}"
+        bal_html += f'<tr><td class="{team_class}">{player}</td><td>{fmt(comp)}</td><td>{fmt(ledg)}</td><td style="color:{tot_color};font-weight:700;font-size:1.1rem;">{tot_str}</td></tr>'
+    bal_html += '</tbody></table>'
+    st.markdown(bal_html, unsafe_allow_html=True)
+
+    st.markdown("")
 
     # Simplify debts - greedy algorithm
     debtors = [(p, -balances[p]) for p in ALL_PLAYERS if balances[p] < -0.01]
