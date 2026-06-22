@@ -1123,6 +1123,13 @@
         "Pat Donoho",
         "Joe Donoho"
       ]
+    },
+    {
+      "type": "side_bet",
+      "from": "Joe Donoho",
+      "to": "Mike Haynes",
+      "amount": 60.0,
+      "desc": "Mike reported  Ledger"
     }
   ]
 }
